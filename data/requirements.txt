@@ -3,10 +3,10 @@
 # Manually managing azure-functions-worker may cause unexpected issues
 
 azure-functions
+azure-search-documents
 unstructured
 langchain
 langchain_community
 azure-cosmos
 markdown
-azure-search-documents
 openai

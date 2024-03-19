@@ -1,1 +1,5 @@
 GET  http://localhost:7071/api/upload_data
+
+###
+GET  http://localhost:7071/api/chat?query=集約の種類を教えて
+
