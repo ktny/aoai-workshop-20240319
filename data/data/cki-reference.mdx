@@ -1,0 +1,3461 @@
+---
+title: CKIの使用方法
+---
+
+CKIはコマンドを用いてKIを操作できるCLIアプリケーションです。\
+このページでは、CKIの各コマンドの使用方法について説明します。\
+CKIのインストール方法、およびKIサーバーへの接続手順については、KIの画面右上にある[:icon[/assets/img/common/icon-more-horizontal.svg,オプション設定]]ボタンから[CKIのダウンロード]ボタンを選択して表示される画面の説明を参照してください。\
+オフライン環境にCKIをインストールする場合は、事前に依存するライブラリを取得する必要があります。\
+手順については「[オフラインインストールについて](#オフラインインストールについて)」を参照してください。
+:::note{.hint}
+ヒント
+
+[CKIのダウンロード]ボタンは、パワーユーザー権限以上のユーザーにのみ表示されます。
+:::
+
+## コマンド概要
+- [config (KIサーバーへの接続情報を確認する)](#config)
+- [configure (KIサーバーへの接続設定を行う)](#configure)
+- [check_update (新しいバージョンのCKIをインストールする)](#check_update)
+- [dataset (データセット一覧のデータセットを操作する)](#dataset-ls)
+  - [acl (データセットの権限を設定する)](#dataset-acl-get)
+  - [union_dataset (連結データセットを操作する)](#dataset-union_dataset-create)
+- [df (KIサーバー内のディスクの空き容量を確認する)](#df)
+- [driver (ドライバーファイルを管理する)](#driver-ls)
+- [log (ログファイルをダウンロードする)](#log-download)
+- [project (プロジェクトを操作する)](#project-ls)
+  - [acl (プロジェクトの権限を操作する)](#project-acl-get)
+  - [app (分析を操作する)](#project-app-ls)
+  - [dataset (分析用データを操作する)](#project-dataset-ls)
+  - [segment (セグメント一覧を操作する)](#project-segment-ls)
+- [schedule (スケジュールを操作する)](#schedule-ls)
+- [task (実行中のタスクや実行が完了したタスクの履歴を確認する)](#task-ls)
+- [user (ユーザーを操作する)](#user-ls)
+  - [group (ユーザーグループを操作する)](#user-group-ls)
+- [version (KIサーバーとCKIのバージョンを確認する)](#version)
+
+
+## コマンドリファレンス
+### config
+
+KIサーバーへの接続情報を表示します。\
+configureコマンドで設定した内容を確認する際に使用します。
+
+```
+$ ki config
+|                 endpoint                    |  username  |
+|---------------------------------------------+------------|
+| https://xxxxxxxxxxxxx.analytics-keyence.com |  admin001  |
+```
+
+### configure
+
+KIサーバーへの接続情報を設定します。\
+CKIでKIを操作するにあたって、最初にこの設定をする必要があります。\
+詳細については、CKIのダウンロードページに記載されている[KIサーバへのログイン]を参照してください。\
+なお、このコマンドを実行してSSL関連のエラーが表示される場合は、環境変数CKI_CONFIGにdisable_ssl_verifyを設定することでSSL認証を無効にできます。
+
+- Linuxの場合
+```sh
+export CKI_CONFIG=disable_ssl_verify
+```
+- PowerShellの場合
+```sh
+Env:CKI_CONFIG=disable_ssl_verify
+```
+クライアント証明書が必要な場合は、以下のように設定します。
+- Linuxの場合
+```sh
+export CKI_CONFIG=disable_ssl_verify,cert=xxxxxx.pem
+```
+- PowerShellの場合
+```sh
+Env:CKI_CONFIG=disable_ssl_verify,cert=xxxxxx.pem
+```
+
+認証に成功すると、ホームディレクトリの中である「~/.ki」に接続情報や認証トークンを含むファイルが配置され、その他のコマンドでもKIサーバーを操作できるようになります。
+
+
+環境変数CKI_CONFIGには、カンマ区切りで複数の項目を設定できます。\
+設定一覧は以下のとおりです。
+
+| オプション | 説明 |
+| ---------- | ---- |
+| disable_ssl_verify | SSLの証明書の検証を無効にします。 |
+| cert | クライアント証明書を指定します。 |
+
+### check_update
+CKIを現行のKIサーバーのバージョンに合わせて更新します。
+
+:::note{.point}
+KI Ver.2.3.0、およびVer.2.3.1からのアップデートではcheck_updateコマンドは使用できません。\
+KIの画面右上にある[:icon[/assets/img/common/icon-more-horizontal.svg,オプション設定]]ボタンから[CKIのダウンロード]ボタンを選択し、再度ダウンロードしてインストールし直す必要があります。
+:::
+
+```
+ki check_update [-y]
+                [-q]
+                [--force_reinstall]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| -y / `--`yes | 任意 | プロンプトでの確認を省いて更新を実行します。 |
+| -q / `--`quiet | 任意 | 標準出力への出力をしないようにします。 |
+| `--`force_reinstall | 任意 | 更新後のCKIが現行のCKIのバージョンより古い場合でも、強制的に更新を実行します。 |
+
+
+更新の必要がない場合は、以下のように最新であることを示すメッセージが表示されます。
+```
+$ ki check_update -y
+This CKI is up to date.
+```
+
+以下のようにスクリプトの先頭に入れておくことで、KIサーバーのバージョンアップにあわせて実行時に自動でCKIを更新できるようになります。
+
+```
+set -e
+
+
+ki check_update -y -q
+
+
+# ...
+# CKIを使うその他の処理
+```
+
+### dataset ls
+データセット一覧を表示します。
+```
+ki dataset ls [-f FOLDER | --all]
+              [-tz TIMEZONE]
+              [--table | --json | --text]
+              [--delimiter {comma,semicolon,tab,space}]
+              [--quote {single,double,none}]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| -f / `--`folder | 任意 | 特定のFOLDERの中身を表示します。 |
+|  |  | typeがFOLDERのデータセットのdataset_idを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`all | 任意 | フォルダーの中身も含め、すべてのデータセットを表示します。 |
+| -tz | 任意 | created_at、last_updated_atのタイムゾーン(Asia/Tokyoなど)を指定します。 |
+|  |  | デフォルトでは、コマンドを実行している環境のタイムゾーン設定が用いられます。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+データセット関連のコマンドで指定するdataset_idは、このコマンドの実行結果から確認できます。
+```
+|  type  |  dataset_id  |  dataset_name  |  owner   |  rows  |  columns  |  size  |     created_at      |   last_updated_at   |
+|--------+--------------+----------------+----------+--------+-----------+--------+---------------------+---------------------|
+| FOLDER |     105      |   Folder001    | admin001 |   0    |     0     |   0    | 2023/07/21 13:22:50 | 2023/07/21 13:22:50 |
+|  FILE  |     106      |     顧客マスタ      | admin001 |  4998  |     5     | 352256 | 2023/07/21 13:26:27 | 2023/07/21 13:26:27 |
+|  URL   |     107      |    test.csv    |  admin001  |   2    |     2     |   16384   | 2023/07/21 13:28:25 | 2023/07/21 13:28:25 |
+```
+
+### dataset head
+指定したデータセットの先頭からレコードをN件(デフォルトは10件)表示します。
+```
+ki dataset head  --dataset_id DATASET_ID
+                 [-n N]
+                 [--table | --json | --text]
+                 [--delimiter {comma,semicolon,tab,space}]
+                 [--quote {single,double,none}]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | 対象のデータセットのIDを指定します。 |
+| -n / `--`records | 任意 | 表示するレコードの件数(デフォルトは10件)を指定します。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+
+以下は、dataset lsコマンドで調べたdataset_idを元に、顧客マスタのプレビューを表示する場合の実行例です。
+```
+$ ki dataset head --dataset_id=13 -n 5
+|   顧客ID    |  性別  |  年代  |  会員ポイント残高  |  離反  |  店舗での最終購買日  |
+|-----------+------+------+------------+------+-------------|
+| 100000154 |  男性  |  60  |    640     |  0   | 2018-12-15  |
+| 100008860 |  女性  |  60  |    2510    |  0   | 2018-12-27  |
+| 100026871 |  女性  |  30  |    860     |  0   | 2018-12-27  |
+| 100030564 |  男性  |  20  |    410     |  0   | 2018-06-23  |
+| 100030755 |  女性  |  40  |    180     |  1   | 2017-08-03  |
+```
+### dataset schema
+データセットのスキーマ(各カラムのIDや型)を表示します。
+```
+ki dataset schema --dataset_id DATASET_ID
+                  [--table | --json | --text]
+                  [--delimiter {comma,semicolon,tab,space}]
+                  [--quote {single,double,none}]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | 対象のデータセットのIDを指定します。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+```
+$ ki dataset schema --dataset_id=13
+|  column_id  |  column_name  |  column_type  |
+|-------------+---------------+---------------|
+|  ds13_0001  |     顧客ID      |    integer    |
+|  ds13_0002  |      性別       |    string     |
+|  ds13_0003  |      年代       |    integer    |
+|  ds13_0004  |   会員ポイント残高    |    integer    |
+|  ds13_0005  |      離反       |    integer    |
+|  ds13_0006  |   店舗での最終購買日   |     date      |
+```
+### dataset mkdir
+
+指定した名前でデータセット一覧にフォルダーを作成します。\
+特定のフォルダー内にフォルダーを作成したい場合は、dataset lsコマンドと同様に-f / `--`folderオプションを指定します。
+
+```
+ki dataset mkdir [-f FOLDER]
+                 [--result]
+                 name
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| -f / `--`folder | 任意 | 指定したフォルダー内にフォルダーが作成されます。 |
+|  |  | 指定しない場合はルートに作成されます。 |
+|  |  | 詳細については、「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたフォルダーのdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| name | 必須 | フォルダー名を指定します。 |
+
+
+### dataset mv
+
+データセットを特定のフォルダーに移動します。
+
+```
+ki dataset mv --dataset_id DATASET_ID
+              -f FOLDER
+              [--apply_dest_permission]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | 移動するデータセットのIDを指定します。 |
+| -f / `--`folder | 必須 | 移動先のフォルダーのデータセットIDを指定します。 |
+|  |  | 詳細については、「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`apply_dest_permission | 任意 | このパラメーターを指定すると、データセットのアクセス権限が移動先のフォルダーのアクセス権限に合わせられます。 |
+|  |  | 指定しない場合は、データセットの元のアクセス権限が維持されます。 |
+
+### dataset rm
+
+データセットを削除します。
+
+```
+ki dataset rm --dataset_id DATASET_ID
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | 削除対象のデータセットのIDを指定します。 |
+
+### dataset rename
+データセットの名前を変更します。
+```
+ki dataset rename --dataset_id DATASET_ID
+                  name
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | 名前を変更するデータセットのIDを指定します。 |
+| name | 必須 | 変更後の名前を指定します。 |
+
+
+### dataset refresh
+データセットを更新します。
+```
+ki dataset refresh --dataset_id DATASET_ID
+                   [--force]
+                   [--async]
+                   [file_path]
+                   [--schema_file SCHEMA_FILE]
+                   [--chunk_size CHUNK_SIZE]
+                   [--qualifier {single,double,none}]
+                   [--delimiter {comma,semicolon,tab,space}]
+                   [--encoding {UTF-8,UTF-16,Latin-1,Shift-JIS,Windows-1252}]
+                   [--sheet_name SHEET_NAME]
+                   [--header_line HEADER_LINE]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | 更新するデータセットのIDを指定します。 |
+| `--`force | 任意 | このパラメーターを指定した場合、更新によってスキーマが変化する場合でも強制的に更新を実行します。 |
+|  |  | 指定しない場合は必要に応じてプロンプトで確認されます。 |
+| `--`async | 任意 | このパラメーターを指定した場合、データの更新完了まで待たずにtask_idを標準出力に出力して終了します。 |
+|  |  | 詳細は「[`--`asyncオプションとtask waitコマンド](#--asyncオプションとtask-waitコマンド)」を参照してください。 |
+| file_path | 必須 | 更新に使用するファイルのパスを指定します。 |
+|  | ※更新対象がFILEデータセットの場合のみ |  |
+| `--`schema_file | 任意 | 更新対象がFILEデータセットの場合のみ有効なオプションです。 |
+|  |  | アップロードされたファイルの各列の型と取り込み有無を明示的に指定します。 |
+|  |  | 指定しない場合は、KIサーバーが自動で推定した型で取り込まれます。 |
+|  |  | 詳細は「[スキーマファイルのフォーマット](#スキーマファイルのフォーマット)」を参照してください。 |
+| `--`chunk_size | 任意 | 更新対象がFILEデータセット、かつアップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | アップロード時のファイル分割における、分割された個々のファイルのサイズを指定します。 |
+|  |  | 大きい値を指定すると多くの場合はスループットが向上しますが、その分、メモリの消費が大きくなります。 |
+| `--`qualifier | 任意 | 更新対象がFILEデータセット、かつアップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`delimiter | 任意 | 更新対象がFILEデータセット、かつアップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | CSVファイルの区切り文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`encoding | 任意 | アップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | ファイルのエンコーディングを次のいずれかから指定します。 |
+|  |  | - UTF-8 |
+|  |  | - UTF-16 |
+|  |  | - Latin-1 |
+|  |  | - Shift-JIS |
+|  |  | - Windows-1252 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`sheet_name | 任意 | アップロードするファイルがExcelファイルの場合のみ有効なオプションです。 |
+|  |  | 取り込むシート名を指定します。 |
+|  |  | 指定しない場合は、一番左のシートが取り込まれます。 |
+| `--`header_line | 任意 | ヘッダー行の行番号を指定します。 |
+|  |  | 指定しない場合は、1行目がヘッダー行とみなされます。 |
+
+ファイルデータセットを更新する場合のみ、更新に使用するファイルのパスを指定する必要があります。
+```
+$ ki dataset refresh --dataset_id=13 ./顧客マスタ.csv --schema_file=./顧客マスタ_スキーマ.json
+```
+その他の種別のデータセットの場合は既存の設定を元にデータが再取得されますので、dataset_idのみを指定してください。
+```
+$ ki dataset refresh --dataset_id=1
+```
+### dataset add_file
+
+file_pathで指定したファイルをデータセット一覧に登録します。\
+取り込まない列の指定や、列の型を明示したい場合は、–schema_fileオプションを使用します。
+
+```
+ki dataset add_file [--name NAME]
+                    [-f FOLDER]
+                    [--chunk_size CHUNK_SIZE]
+                    [--qualifier {single,double,none}]
+                    [--delimiter {comma,semicolon,tab,space}]
+                    [--encoding {UTF-8,UTF-16,Latin-1,Shift-JIS,Windows-1252}]
+                    [--sheet_name SHEET_NAME]
+                    [--header_line HEADER_LINE]
+                    [--schema_file SCHEMA_FILE]
+                    [--result]
+                    file_path
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`name | 任意 | データセット一覧に登録する際のデータセット名を指定します。 |
+|  |  | 省略した場合はファイル名が使用されます。 |
+| -f / `--`folder | 任意 | データセットを作成するフォルダーを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`chunk_size | 任意 | アップロード時のファイル分割における、分割された個々のファイルのサイズを指定します。 |
+|  |  | 大きい値を指定すると多くの場合はスループットが向上しますが、その分、メモリの消費が大きくなります。 |
+| `--`qualifier | 任意 | アップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`delimiter | 任意 | アップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | CSVファイルの区切り文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`encoding | 任意 | アップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | ファイルのエンコーディングを次のいずれかから指定します。 |
+|  |  | - UTF-8 |
+|  |  | - UTF-16 |
+|  |  | - Latin-1 |
+|  |  | - Shift-JIS |
+|  |  | - Windows-1252 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`sheet_name | 任意 | アップロードするファイルがExcelファイルの場合のみ有効なオプションです。 |
+|  |  | 取り込むシート名を指定します。 |
+|  |  | 指定しない場合は、一番左のシートが取り込まれます。 |
+| `--`header_line | 任意 | ヘッダー行の行番号を指定します。 |
+|  |  | 指定しない場合は、1行目がヘッダー行とみなされます。 |
+| `--`schema_file | 任意 | アップロードされたファイルの各列の型と取り込み有無を明示的に指定します。 |
+|  |  | 指定しない場合は、KIサーバーが自動で推定した型で取り込まれます。 |
+|  |  | 詳細は「[スキーマファイルのフォーマット](#スキーマファイルのフォーマット)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、アップロードによって作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+
+以下は、スキーマ指定で取り込む場合の実行例です。
+```
+$ ki dataset add_file 顧客マスタ.xlsx --folder=677 --sheet_name="顧客マスタ" --header_line=1 --schema_file=master-schema.json
+
+Dataset has been registered with ID 1288.
+```
+
+### dataset add_database
+データベース中のテーブルをデータセット一覧に取り込みます。
+```
+ki dataset add_database [--name NAME]
+                        [-f FOLDER]
+                        --database_type {POSTGRESQL,ORACLE,MYSQL,SQLSERVER}
+                        -h HOST
+                        [-p PORT]
+                        [--database DATABASE]
+                        [-u USER]
+                        [--password PASSWORD]
+                        [--schema SCHEMA]
+                        [--table TABLE]
+                        [--query QUERY]
+                        [--result]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はテーブル名が使用されます。 |
+| -f / `--`folder | 任意 | データセットを作成するフォルダーを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`database_type | 必須 |接続先データベースの種別を以下のいずれかから指定します。 |
+|  |  | - POSTGRESQL |
+|  |  | - ORACLE |
+|  |  | - MYSQL |
+|  |  | - SQLSERVER |
+| -h / `--`host | 必須 | 接続先データベースのKIサーバーから解決可能なアドレスを指定します。 |
+| -p / `--`port | 任意 | 接続先データベースの接続ポートを指定します。 |
+|  |  | 省略した場合は、データベース種別に応じてデフォルトのポートが選択されます。 |
+| `--`database | 任意 | 接続先のデータベース名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| -u / `--`user | 任意 | 接続ユーザー名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`password | 任意 | 接続ユーザーのパスワードを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`schema | 任意 | 取り込むテーブルが属するスキーマを指定します。 |
+| `--`table | 任意 | 取り込むテーブル名を指定します。 |
+|  | ※省略した場合は対話型で設定 |  |
+| `--`query | 任意 | SQLを指定します。 |
+|  |  | SQLの実行結果が、データセットとして取り込まれます。 |
+|  |  |`--`queryを指定した場合は`--`schema、`--`tableの指定は不要です。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたデータセットのIDが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+
+一部のパラメーターは、以下のように対話型で設定できます。
+```
+$ ki dataset add_database --database_type=POSTGRESQL --host=xxx.xxx.xxx.xxx --port=xxxx
+Please enter database name to connect to: database001
+Please enter username of the database: databaseuser001
+Please enter password for the user databaseuser001:
+
+[1] database001.table001
+[2] database001.table002
+[3] database001.table003
+
+Please enter the number of table to import from the list above: 2
+
+
+Dataset has been registered with ID 139.
+```
+
+### dataset add_jdbc
+JDBCを用いて、外部ソースからデータをデータセット一覧に取り込みます。
+```
+ki dataset add_jdbc --name NAME
+                    [-f FOLDER]
+                    --connection CONNECTION
+                    --class CLASSNAME
+                    --driver DRIVER
+                    [-u USER]
+                    [--password PASSWORD]
+                    [--schema SCHEMA]
+                    [--table TABLE]
+                    [--query QUERY]
+                    [--disable_transaction]
+                    [--result]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`name | 必須 | 取り込み時のデータセット名を指定します。 |
+| -f / `--`folder | 任意 | データセットを作成するフォルダーを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`connection | 必須 | JDBCの接続用URLを指定します。 |
+|  |  | 例)jdbc:postgresql://host:5432/database |
+| `--`class | 必須 | JDBCにおけるドライバーのクラス名を指定します。 |
+|  |  | 例)org.postgresql.Driver |
+| `--`driver | 必須 | ドライバーとしてアップロード済みのjarファイル名を指定します。 |
+|  |  | ファイル名はdriverコマンドを用いて確認できます。 |
+| -u / `--`user | 任意 | 接続ユーザー名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`password | 任意 | 接続ユーザーのパスワードを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`schema | 任意 | 取り込むテーブルが属するスキーマを指定します。 |
+| `--`table | 任意 | 取り込むテーブル名を指定します。 |
+| `--`query | 任意 | SQLを指定します。 |
+|  | ※省略した場合は対話型で設定 | SQLの実行結果が、データセットとして取り込まれます。 |
+|  |  | `--`queryを指定した場合は`--`schema、`--`tableの指定は不要です。 |
+|  |  | 省略した場合は対話型で設定が可能です。 |
+| `--`disable_transaction | 任意 | このパラメーターを指定すると、取り込み時のトランザクションを無効化します。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたデータセットのIDが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+
+一部のパラメーターは、以下のように対話型で設定できます。
+```
+$ ki dataset add_jdbc --name="jdbc-sample" --connection="jdbc:postgresql://xxxx:xxxx/database001" --class="org.postgresql.Driver" --driver="postgres-jdbc.jar"
+Please enter username of the database: databaseuser001
+Please enter password for the user databaseuser001:
+Please enter query SQL: SELECT * FROM "database001"."table001";
+
+Dataset has been registered with ID 147.
+```
+### dataset add_http
+HTTPサーバーでホストされているファイルをデータセット一覧に取り込みます。
+```
+ki dataset add_http [--name NAME]
+                    [-f FOLDER]
+                    [--qualifier {single,double,none}]
+                    [--delimiter {comma,semicolon,tab,space}]
+                    [--encoding {UTF-8,UTF-16,Latin-1,Shift-JIS,Windows-1252}]
+                    [--sheet_name SHEET_NAME]
+                    [--header_line HEADER_LINE]
+                    [--schema_file SCHEMA_FILE]
+                    [--result]
+                    URL
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はファイル名が使用されます。 |
+| -f / `--`folder | 任意 | データセットを作成するフォルダーを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`qualifier | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`delimiter | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | CSVファイルの区切り文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`encoding | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | ファイルのエンコーディングを次のいずれかから指定します。 |
+|  |  | - UTF-8 |
+|  |  | - UTF-16 |
+|  |  | - Latin-1 |
+|  |  | - Shift-JIS |
+|  |  | - Windows-1252 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`sheet_name | 任意 | URLで指定したファイルがExcelファイルの場合のみ有効なオプションです。 |
+|  |  | 取り込むシート名を指定します。 |
+|  |  | 指定しない場合は、一番左のシートが取り込まれます。 |
+| `--`header_line | 任意 | ヘッダー行の行番号を指定します。 |
+|  |  | 指定しない場合は、1行目がヘッダー行とみなされます。 |
+| `--`schema_file | 任意 | URLで指定したファイルの各列の型と取り込み有無を明示的に指定します。 |
+|  |  | 指定しない場合は、KIサーバーが自動で推定した型で取り込まれます。 |
+|  |  | 詳細は「[スキーマファイルのフォーマット](#スキーマファイルのフォーマット)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| URL | 必須 | 取り込み対象のファイルのURLを指定します。 |
+
+
+以下は、スキーマ指定で取り込む場合の実行例です。
+```
+$ ki dataset add_http --schema_file=./sample-schema.json https://storage.googleapis.com/xxxxxxxx/sample.csv
+
+
+Dataset has been registered with ID 148.
+```
+
+### dataset add_smb
+Windowsファイル共有やSMBサーバーでホストされているファイルをデータセット一覧に取り込みます。
+```
+ki dataset add_smb [--name NAME]
+                   [-f FOLDER]
+                   [--qualifier {single,double,none}]
+                   [--delimiter {comma,semicolon,tab,space}]
+                   [--encoding {UTF-8,UTF-16,Latin-1,Shift-JIS,Windows-1252}]
+                   [--sheet_name SHEET_NAME]
+                   [--header_line HEADER_LINE]
+                   [--schema_file SCHEMA_FILE]
+                   [-u USER]
+                   [--password PASSWORD]
+                   [--result]
+                   --workgroup WORKGROUP
+                   file_path
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はファイル名が使用されます。 |
+| -f / `--`folder | 任意 | データセットを作成するフォルダーを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`qualifier | 任意 | file_pathで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`delimiter | 任意 | file_pathで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | CSVファイルの区切り文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`encoding | 任意 | file_pathで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | ファイルのエンコーディングを次のいずれかから指定します。 |
+|  |  | - UTF-8 |
+|  |  | - UTF-16 |
+|  |  | - Latin-1 |
+|  |  | - Shift-JIS |
+|  |  | - Windows-1252 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`sheet_name | 任意 | file_pathで指定したファイルがExcelファイルの場合のみ有効なオプションです。 |
+|  |  | 取り込むシート名を指定します。 |
+|  |  | 指定しない場合は、一番左のシートが取り込まれます。 |
+| `--`header_line | 任意 | ヘッダー行の行番号を指定します。 |
+|  |  | 指定しない場合は、1行目がヘッダー行とみなされます。 |
+| `--`schema_file | 任意 | file_pathで指定したファイルの各列の型と取り込み有無を明示的に指定します。 |
+|  |  | 指定しない場合は、KIサーバーが自動で推定した型で取り込まれます。 |
+|  |  | 詳細は「[スキーマファイルのフォーマット](#スキーマファイルのフォーマット)」を参照してください。 |
+| -u / `--`user | 任意 | 接続ユーザー名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`password | 任意 | 接続ユーザーのパスワードを指定します。 |
+|  | ※省略した場合は対話型で設定 |省略した場合は対話型で設定が可能です。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| `--`workgroup | 必須 | SMBサーバーのワークグループを指定します。 |
+| file_path | 必須 | SMBサーバーのホスト、およびホスト上での対象ファイルのパスを指定します。 |
+|  |  | 例)host/folder/file.csv |
+
+
+以下は、スキーマ指定で取り込む場合の実行例です。
+```
+$ ki dataset add_smb --workgroup=WG --schema_file=./sample-schema.json xxx.xxx.xxx.xxx/folder001/test.csv
+Please enter username: user001
+Please enter password for the user user001:
+
+Dataset has been registered with ID 150.
+```
+
+### dataset add_s3
+Amazon S3でホストされているファイルをデータセット一覧に取り込みます。
+```
+ki dataset add_s3 [--name NAME]
+                  [-f FOLDER]
+                  [--qualifier {single,double,none}]
+                  [--delimiter {comma,semicolon,tab,space}]
+                  [--encoding {UTF-8,UTF-16,Latin-1,Shift-JIS,Windows-1252}]
+                  [--sheet_name SHEET_NAME]
+                  [--header_line HEADER_LINE]
+                  [--schema_file SCHEMA_FILE]
+                  [--result]
+                  [--access_key_id ACCESS_KEY_ID]
+                  [--secret_access_key SECRET_ACCESS_KEY]
+                  URL
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はファイル名が使用されます。 |
+| -f / `--`folder | 任意 | データセットを作成するフォルダーを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`qualifier | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`delimiter | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`encoding | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | ファイルのエンコーディングを次のいずれかから指定します。 |
+|  |  | - UTF-8 |
+|  |  | - UTF-16 |
+|  |  | - Latin-1 |
+|  |  | - Shift-JIS |
+|  |  | - Windows-1252 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`sheet_name | 任意 | URLで指定したファイルがExcelファイルの場合のみ有効なオプションです。 |
+|  |  | 取り込むシート名を指定します。 |
+|  |  | 指定しない場合は、一番左のシートが取り込まれます。 |
+| `--`header_line | 任意 | ヘッダー行の行番号を指定します。 |
+|  |  | 指定しない場合は、1行目がヘッダー行とみなされます。 |
+| `--`schema_file | 任意 | URLで指定したファイルの各列の型と取り込み有無を明示的に指定します。 |
+|  |  | 指定しない場合は、KIサーバーが自動で推定した型で取り込まれます。 |
+|  |  | 詳細は「[スキーマファイルのフォーマット](#スキーマファイルのフォーマット)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| `--`access_key_id | 任意 | AWSのアクセスキーのIDを指定します。 |
+|  |  | 指定しない場合は、環境変数AWS_ACCESS_KEY_IDを参照します。 |
+| `--`secret_access_key | 任意 | AWSのシークレットアクセスキーを指定します。 |
+|  |  | 指定しない場合は、環境変数AWS_SECRET_ACCESS_KEYを参照します。 |
+| URL | 必須 | 取り込むオブジェクトのURLを指定します(s3://から始まる必要があります)。 |
+
+
+以下は、クレデンシャルを指定して取り込む場合の実行例です。
+```
+$ ki dataset add_s3 --access_key_id=$AWS_ACCESS_KEY_ID --secret_access_key=$AWS_SECRET_ACCESS_KEY s3://bucket001/test.csv
+
+Dataset has been registered with ID 505.
+```
+
+### dataset add_gcs
+Google Cloud Storageでホストされているファイルをデータセット一覧に取り込みます。
+```
+ki dataset add_gcs [--name NAME]
+                   [-f FOLDER]
+                   [--qualifier {single,double,none}]
+                   [--delimiter {comma,semicolon,tab,space}]
+                   [--encoding {UTF-8,UTF-16,Latin-1,Shift-JIS,Windows-1252}]
+                   [--sheet_name SHEET_NAME]
+                   [--header_line HEADER_LINE]
+                   [--schema_file SCHEMA_FILE]
+                   [--result]
+                   [--service_account_key CREDENTIAL_FILE]
+                   URL
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はファイル名が使用されます。 |
+| -f / `--`folder | 任意 | データセットを作成するフォルダーを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`qualifier | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`delimiter | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | CSVファイルの区切り文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`encoding | 任意 | file_pathで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | ファイルのエンコーディングを次のいずれかから指定します。 |
+|  |  | - UTF-8 |
+|  |  | - UTF-16 |
+|  |  | - Latin-1 |
+|  |  | - Shift-JIS |
+|  |  | - Windows-1252 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`sheet_name | 任意 | URLで指定したファイルがExcelファイルの場合のみ有効なオプションです。 |
+|  |  | 取り込むシート名を指定します。 |
+|  |  | 指定しない場合は、一番左のシートが取り込まれます。 |
+| `--`header_line | 任意 | ヘッダー行の行番号を指定します。 |
+|  |  | 指定しない場合は、1行目がヘッダー行とみなされます。 |
+| `--`schema_file | 任意 | URLで指定したファイルの各列の型と取り込み有無を明示的に指定します。 |
+|  |  | 指定しない場合は、KIサーバーが自動で推定した型で取り込まれます。 |
+|  |  | 詳細は「[スキーマファイルのフォーマット](#スキーマファイルのフォーマット)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| `--`service_account_key | 任意 | サービスアカウント認証用のJSONファイルのファイルパスを指定します。 |
+| URL | 必須 | 取り込むオブジェクトのURLを指定します(gs://から始まる必要があります)。 |
+
+
+### dataset add_salesforce
+Salesforceオブジェクトをデータセット一覧に取り込みます。
+```
+ki dataset add_salesforce [--name NAME]
+                          [-f FOLDER]
+                          -h HOST
+                          [-u USER]
+                          [--password PASSWORD]
+                          [--security_token SECURITY_TOKEN]
+                          [--table TABLE]
+                          [--filter_soql FILTER_SOQL]
+                          [--result]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はオブジェクト名が使用されます。 |
+| -f / `--`folder | 任意 | データセットを作成するフォルダーを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| -h / `--`host | 必須 | Salesforceのホスト名を入力します。 |
+| -u / `--`user | 任意 | 接続ユーザー名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`password | 任意 |接続ユーザーのパスワードを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`security_token | 任意 | セキュリティトークンを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`table | 任意 | 取り込み対象のオブジェクト名を指定します。 |
+|  | ※省略した場合は対話型で設定 |  |
+| `--`filter_soql | 任意 | 取り込み対象の項目を絞り込むためのSOQLによるフィルター条件を指定します。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+
+一部のパラメーターは、以下のように対話型で設定できます。
+```
+$ ki dataset add_salesforce --host=https://test.salesforce.com --user=xxxxxx@keyence.co.jp
+Enter password for xxxxxx@keyence.co.jp:
+Enter Security token for xxxxxx@keyence.co.jp:
+
+
+[1] object001
+[2] object002
+[3] object003
+[4] object004
+
+Please enter the number of table to import from the list above: 2
+
+Dataset has been registered with ID 151.
+```
+取り込む内容を絞り込みたい場合は、以下のように–filter_soqlオプションを使用します。
+```
+$ ki dataset add_salesforce --host=https://test.salesforce.com --user=xxxxxx@keyence.co.jp --password=xxxxxxxxx --security_token=xxxxxxxxxxxx \
+  --table=Task --filter_soql="WHERE CreatedDate > 2020-12-22T00:00:00Z"
+
+Dataset has been registered with ID 14833.
+```
+
+### dataset add_bigquery
+BigQueryのテーブルからデータセット一覧に取り込みます。
+```
+ki dataset add_bigquery [--name NAME]
+                        [-f FOLDER]
+                        --gcp_project_id GCP_PROJECT_ID
+                        --bigquery_dataset_id BIGQUERY_DATASET_ID
+                        [--service_account_key CREDENTIAL_FILE]
+                        [--table TABLE]
+                        [--query QUERY]
+                        [--result]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はBigQuery側のテーブル名が使用されます。 |
+| -f / `--`folder | 任意 | データセットを作成するフォルダーを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`gcp_project_id | 必須 | Google Cloud PlatformのプロジェクトIDを指定します。 |
+| `--`bigquery_dataset_id | 必須 | BigQueryのデータセットIDを指定します。 |
+| `--`service_account_key | 任意 | サービスアカウント認証用のJSONファイルのファイルパスを指定します。 |
+| `--`table | 任意 | 取り込むテーブル名を指定します。 |
+|  |  | 省略した場合は対話型で設定が可能です。 |
+| `--`query | 任意 | SQLを指定します。 |
+|  | ※省略した場合は対話型で設定 | SQLの実行結果が、データセットとして取り込まれます。 |
+|  |  | `--`queryを指定した場合は`--`schema、`--`tableの指定は不要です。 |
+|  |  | 省略した場合は対話型で設定が可能です。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+
+
+### dataset union_dataset create
+連結データセットを新規作成します。
+```
+ki dataset union_dataset create [-f FOLDER]
+                                [--result]
+                                name
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| -f / `--`folder | 任意 | 連結データセットを作成するフォルダーのデータセットIDを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| name | 必須 | 連結データセットの名前を指定します。 |
+
+```
+ki dataset union_dataset create union_dataset001
+
+The union dataset union_dataset001 has been created with ID 168.
+```
+
+### dataset union_dataset get_alignment
+連結データセットの行連結方式を取得します(BY_NAME、またはBY_POSITION)。
+```
+ki dataset union_dataset get_alignment --dataset_id DATASET_ID
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | 連結データセットのデータセットIDを指定します。 |
+```
+$ ki dataset union_dataset get_alignment --dataset_id=168
+BY_NAME
+```
+
+### dataset union_dataset set_alignment
+連結データセットの行連結方式を設定します。
+```
+ki dataset union_dataset set_alignment --dataset_id DATASET_ID
+                                       {BY_NAME,BY_POSITION}
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | 連結データセットのデータセットIDを指定します。 |
+| BY_NAME / BY_POSITION | 必須 | 設定する行連結方式を指定します。 |
+|  |  | - BY_NAME: |
+|  |  | 　列名で連結 |
+|  |  | - BY_POSITION: |
+|  |  | 　列位置で連結 |
+
+
+```
+$ ki dataset union_dataset set_alignment --dataset_id=168 BY_POSITION
+
+Alignment has been set to BY_POSITION successfully.
+```
+
+### dataset union_dataset members
+連結データセットに属しているデータセットの一覧を表示します。
+```
+ki dataset union_dataset members --dataset_id DATASET_ID
+                                 [-tz TIMEZONE]
+                                 [--table | --json | --text]
+                                 [--delimiter {comma,semicolon,tab,space}]
+                                 [--quote {single,double,none}]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | 連結データセットのデータセットIDを指定します。 |
+| -tz | 任意 | created_at、last_updated_atのタイムゾーン(Asia/Tokyoなど)を指定します。 |
+|  |  | デフォルトでは、コマンドを実行している環境のタイムゾーン設定が用いられます。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+
+```
+$  ki dataset union_dataset members --dataset_id=168
+|  type  |  dataset_id  |  dataset_name  |  rows  |  columns  |   size   |   last_updated_at   |
+|--------+--------------+----------------+--------+-----------+----------+---------------------|
+|  FILE  |     169      |     顧客マスタ      |  4998  |     6     | 416.0 KB | 2022/08/02 17:02:53 |
+```
+
+### dataset union_dataset rename_member
+連結データセットに所属するデータセットの名前を変更します。
+```
+ki dataset union_dataset rename_member --member_dataset_id MEMBER_DATASET_ID
+                                       name
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`member_dataset_id | 必須 | 名前を変更したいデータセットのデータセットIDを指定します。 |
+|  |  | 連結データセットのIDではありませんのでご注意ください。 |
+| name | 必須 | 変更後の名前を指定します。 |
+
+
+
+`--`member_dataset_idオプションで設定するデータセットIDは、dataset union_dataset membersコマンドで確認できます。
+```
+$ ki dataset union_dataset members --dataset_id=168
+|  type  |  dataset_id  |  dataset_name  |  rows  |  columns  |   size   |   last_updated_at   |
+|--------+--------------+----------------+--------+-----------+----------+---------------------|
+|  FILE  |     169      |     顧客マスタ      |  4998  |     6     | 416.0 KB | 2022/08/02 17:02:53 |
+
+
+$ ki dataset union_dataset rename_member --member_dataset_id=169 顧客マスタデータ
+Dataset has been renamed successfully.
+```
+
+### dataset union_dataset refresh_member
+連結データセットに所属するデータセットを更新します。
+```
+ki dataset union_dataset refresh_member --member_dataset_id MEMBER_DATASET_ID
+                                        [--chunk_size CHUNK_SIZE]
+                                        [--qualifier {single,double,none}]
+                                        [--delimiter {comma,semicolon,tab,space}]
+                                        [--encoding {UTF-8,UTF-16,Latin-1,Shift-JIS,Windows-1252}]
+                                        [--sheet_name SHEET_NAME]
+                                        [--header_line HEADER_LINE]
+                                        [--schema_file SCHEMA_FILE]
+                                        [--async]
+                                        [-f]
+                                        [file_path]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`member_dataset_id | 必須 | 更新したいデータセットのデータセットIDを指定します。 |
+|  |  | 連結データセットのIDではありませんのでご注意ください。 |
+| `--`chunk_size | 任意 | 更新対象がFILEデータセット、かつアップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | アップロード時のファイル分割における、分割された個々のファイルのサイズを指定します。 |
+|  |  | 大きい値を指定すると多くの場合はスループットが向上しますが、その分、メモリの消費が大きくなります。 |
+| `--`qualifier | 任意 | 更新対象がFILEデータセット、かつアップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`delimiter | 任意 | 更新対象がFILEデータセット、かつアップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | CSVファイルの区切り文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`encoding | 任意 | アップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | ファイルのエンコーディングを次のいずれかから指定します。 |
+|  |  | - UTF-8 |
+|  |  | - UTF-16 |
+|  |  | - Latin-1 |
+|  |  | - Shift-JIS |
+|  |  | - Windows-1252 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`sheet_name | 任意 | アップロードするファイルがExcelファイルの場合のみ有効なオプションです。 |
+|  |  | 取り込むシート名を指定します。 |
+|  |  | 指定しない場合は、一番左のシートが取り込まれます。 |
+| `--`header_line | 任意 | ヘッダー行の行番号を指定します。 |
+|  |  | 指定しない場合は、1行目がヘッダー行とみなされます。 |
+| `--`schema_file | 任意 | アップロードされたファイルの各列の型と取り込み有無を明示的に指定します。 |
+|  |  | 指定しない場合は、KIサーバーが自動で推定した型で取り込まれます。 |
+|  |  | 詳細は「[スキーマファイルのフォーマット](#スキーマファイルのフォーマット)」を参照してください。 |
+| `--`async | 任意 | このパラメーターを指定した場合、データの更新完了まで待たずにtask_idを標準出力に出力して終了します。 |
+|  |  | 詳細は「[`--`asyncオプションとtask waitコマンド](#--asyncオプションとtask-waitコマンド)」を参照してください。 |
+| `--`force | 任意 | このパラメーターを指定した場合、更新によってスキーマが変化する場合でも強制的に更新を実行します。 |
+|  |  | 指定しない場合は必要に応じてプロンプトで確認されます。 |
+| file_path | 必須 | 更新に使用するファイルのパスを指定します。 |
+|  | ※更新対象がFILEデータセットの場合のみ |  |
+
+
+```
+$ ki dataset union_dataset refresh_member --member_dataset_id=14843
+Refreshing dataset example.iris has been completed successfully.
+```
+
+### dataset union_dataset rm_member
+連結データセットに所属するデータセットを削除します。
+```
+ki dataset union_dataset rm_member --member_dataset_id MEMBER_DATASET_ID
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`member_dataset_id | 必須 | 削除したいデータセットのデータセットIDを指定します。 |
+|  |  | 連結データセットのIDではありませんのでご注意ください。 |
+
+
+`--`member_dataset_idオプションで設定するデータセットIDは、dataset union_dataset membersコマンドで確認できます。
+```
+$ ki dataset union_dataset members --dataset_id=2
+|  type  |  dataset_id  |  dataset_name  |  rows  |  columns  |  size  |   last_updated_at   |
+|--------+--------------+----------------+--------+-----------+--------+---------------------|
+|  FILE  |      3       |   店舗売上履歴_04    | 43713  |     5     | 2.9 MB | 2022/08/03 16:41:49 |
+|  FILE  |      4       |   店舗売上履歴_05    | 43713  |     8     | 3.9 MB | 2022/08/03 16:49:58 |
+
+
+$ ki dataset union_dataset rm_member --member_dataset_id=4
+Dataset has been removed successfully.
+
+$ ki dataset union_dataset members --dataset_id=2
+|  type  |  dataset_id  |  dataset_name  |  rows  |  columns  |  size  |   last_updated_at   |
+|--------+--------------+----------------+--------+-----------+--------+---------------------|
+|  FILE  |      3       |   店舗売上履歴_04    | 43713  |     5     | 2.9 MB | 2022/08/03 16:41:49 |
+```
+
+### dataset union_dataset add_file
+file_pathで指定したファイルを連結データセットに追加します。
+```
+ki dataset union_dataset add_file --dataset_id DATASET_ID
+                                  [--name NAME]
+                                  [--chunk_size CHUNK_SIZE]
+                                  [--qualifier {single,double,none}]
+                                  [--delimiter {comma,semicolon,tab,space}]
+                                  [--encoding {UTF-8,UTF-16,Latin-1,Shift-JIS,Windows-1252}]
+                                  [--sheet_name SHEET_NAME]
+                                  [--header_line HEADER_LINE]
+                                  [--schema_file SCHEMA_FILE]
+                                  [--result]
+                                  file_path
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | データセットを追加する連結データセットのデータセットIDを指定します。 |
+| `--`name | 任意 | データセットに登録する際のデータセット名を指定します。 |
+|  |  | 省略した場合はファイル名が使用されます。 |
+| `--`chunk_size | 任意 | アップロード時のファイル分割における、分割された個々のファイルのサイズを指定します。 |
+|  |  | 大きい値を指定すると多くの場合はスループットが向上しますが、その分、メモリの消費が大きくなります。 |
+| `--`qualifier | 任意 | アップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`delimiter | 任意 | アップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | CSVファイルの区切り文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`encoding | 任意 | アップロードするファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | ファイルのエンコーディングを次のいずれかから指定します。 |
+|  |  | - UTF-8 |
+|  |  | - UTF-16 |
+|  |  | - Latin-1 |
+|  |  | - Shift-JIS |
+|  |  | - Windows-1252 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`sheet_name | 任意 | アップロードするファイルがExcelファイルの場合のみ有効なオプションです。 |
+|  |  | 取り込むシート名を指定します。 |
+|  |  | 指定しない場合は、一番左のシートが取り込まれます。 |
+| `--`header_line | 任意 | ヘッダー行の行番号を指定します。 |
+|  |  | 指定しない場合は、1行目がヘッダー行とみなされます。 |
+| `--`schema_file | 任意 | アップロードされたファイルの各列の型と取り込み有無を明示的に指定します。 |
+|  |  | 指定しない場合は、KIサーバーが自動で推定した型で取り込まれます。 |
+|  |  | 詳細は「[スキーマファイルのフォーマット](#スキーマファイルのフォーマット)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、アップロードによって作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| file_path | 必須 | 追加するファイルのパスを指定します。 |
+
+
+以下のように、typeがUNIONのdataset_idを`--`dataset_idに指定して実行します。
+```
+$ ki dataset ls
+|  type  |  dataset_id  |  dataset_name  |  owner  |  rows  |  columns  |   size   |     created_at      |   last_updated_at   |
+|--------+--------------+----------------+---------+--------+-----------+----------+---------------------+---------------------|
+|  FILE  |      1       |     顧客マスタ      | admin001 |  4998  |     6     |  425984  | 2022/08/03 16:39:25 | 2022/08/03 16:39:25 |
+| UNION  |      2       |     売上トラン      | admin001 | 334330 |    28     | 80322560 | 2022/08/03 16:39:52 | 2022/08/03 17:14:30 |
+
+$  ki dataset union_dataset add_file --dataset_id=2 /home/xxxxxx/店舗売上履歴_06.csv
+
+Dataset has been registered with ID 6.
+```
+
+### dataset union_dataset add_database
+データベース中のテーブルを連結データセットに追加します。
+```
+ki dataset union_dataset add_database --dataset_id DATASET_ID
+                                      [--name NAME]
+                                      --database_type {POSTGRESQL,ORACLE,MYSQL,SQLSERVER}
+                                      -h HOST
+                                      [-p PORT]
+                                      [--database DATABASE]
+                                      [-u USER]
+                                      [--password PASSWORD]
+                                      [--schema SCHEMA]
+                                      [--table TABLE]
+                                      [--query QUERY]
+                                      [--result]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | データセットを追加する連結データセットのデータセットIDを指定します。 |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はテーブル名が使用されます。 |
+| `--`database_type | 必須 | 接続先データベースの種別を以下のいずれかから指定します。 |
+|  |  | - POSTGRESQL |
+|  |  | - ORACLE |
+|  |  | - MYSQL |
+|  |  | - SQLSERVER |
+| -h / `--`host | 必須 | 接続先データベースのKIサーバーから解決可能なアドレスを指定します。 |
+| -p / `--`port | 任意 | 接続先データベースの接続ポートを指定します。 |
+|  |  | 省略した場合は、データベース種別に応じてデフォルトのポートが選択されます。 |
+| `--`database | 任意 | 接続先のデータベース名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| -u / `--`user | 任意 | 接続ユーザー名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`password | 任意 | 接続ユーザーのパスワードを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`schema | 任意 | 取り込むテーブルが属するスキーマを指定します。 |
+| `--`table | 任意 | 取り込むテーブル名を指定します。 |
+|  | ※省略した場合は対話型で設定 |  |
+| `--`query | 任意 | SQLを指定します。 |
+|  |  | SQLの実行結果が、データセットとして取り込まれます。 |
+|  |  | `--`queryを指定した場合は`--`schema、`--`tableの指定は不要です。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+
+
+dataset add_databaseコマンドと同様に、一部のパラメーターは以下のように対話型で設定できます。
+```
+ki dataset union_dataset add_database --dataset_id=2 --database_type=POSTGRESQL --host=xxx.xxx.xxx.xxx --port=xxxx --database=database001 --user=databaseuser001
+Please enter password for the user databaseuser001:
+
+
+[1] database001.table001
+[2] database001.table002
+[3] database001.table003
+
+
+Please enter the number of table to import from the list above: 2
+
+Dataset has been registered with ID 7.
+```
+
+### dataset union_dataset add_jdbc
+JDBCを用いて、外部ソースからデータを連結データセットに取り込みます。
+```
+ki dataset union_dataset add_jdbc --name NAME
+                                  --dataset_id DATASET_ID
+                                  --connection CONNECTION
+                                  --class CLASSNAME
+                                  --driver DRIVER
+                                  [-u USER]
+                                  [--password PASSWORD]
+                                  [--schema SCHEMA]
+                                  [--table TABLE]
+                                  [--query QUERY]
+                                  [--disable_transaction]
+                                  [--result]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | データセットを追加する連結データセットのデータセットIDを指定します。 |
+| `--`name | 必須 | 取り込み時のデータセット名を指定します。 |
+| `--`connection | 必須 | JDBCの接続用URLを指定します。 |
+|  |  | 例)jdbc:postgresql://host:5432/database |
+| `--`class | 必須 | JDBCにおけるドライバーのクラス名を指定します。 |
+|  |  | 例)org.postgresql.Driver |
+| `--`driver | 必須 | ドライバーとしてアップロード済みのjarファイル名を指定します。 |
+|  |  | ファイル名はdriverコマンドを用いて確認できます。 |
+| -u / `--`user | 任意 | 接続ユーザー名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`password | 任意 | 接続ユーザーのパスワードを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`schema | 任意 | 取り込むテーブルが属するスキーマを指定します。 |
+| `--`table | 任意 | 取り込むテーブル名を指定します。 |
+| `--`query | 任意 | SQLを指定します。 |
+|  | ※省略した場合は対話型で設定 | SQLの実行結果が、データセットとして取り込まれます。 |
+|  |  | `--`queryを指定した場合は`--`schema、`--`tableの指定は不要です。 |
+|  |  | 省略した場合は対話型で設定が可能です。 |
+| `--`disable_transaction | 任意 | このパラメーターを指定すると、取り込み時のトランザクションを無効化します。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたデータセットのIDが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+
+
+dataset add_jdbcコマンドと同様に、一部のパラメーターは省略すると対話型で設定できます。
+```
+$ ki dataset union_dataset add_jdbc --dataset_id=2 --name=sample --connection="jdbc:postgresql://xxxx:xxxx/database001" --class="org.postgresql.Driver" --driver="postgres-jdbc.jar"
+Please enter username of the database: databaseuser001
+Please enter password for the user databaseuser001:
+Please enter query SQL: SELECT * FROM "database001"."table001";
+
+Dataset has been registered with ID 9.
+```
+
+### dataset union_dataset add_http
+HTTPサーバーでホストされているファイルを連結データセットに追加します。
+```
+ki dataset union_dataset add_http --dataset_id DATASET_ID
+                                  [--name NAME]
+                                  [--qualifier {single,double,none}]
+                                  [--delimiter {comma,semicolon,tab,space}]
+                                  [--encoding {UTF-8,UTF-16,Latin-1,Shift-JIS,Windows-1252}]
+                                  [--sheet_name SHEET_NAME]
+                                  [--header_line HEADER_LINE]
+                                  [--schema_file SCHEMA_FILE]
+                                  [--result]
+                                  URL
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | データセットを追加する連結データセットのデータセットIDを指定します。 |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はファイル名が使用されます。 |
+| `--`qualifier | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`delimiter | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | CSVファイルの区切り文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`encoding | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | ファイルのエンコーディングを次のいずれかから指定します。 |
+|  |  | - UTF-8 |
+|  |  | - UTF-16 |
+|  |  | - Latin-1 |
+|  |  | - Shift-JIS |
+|  |  | - Windows-1252 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`sheet_name | 任意 | URLで指定したファイルがExcelファイルの場合のみ有効なオプションです。 |
+|  |  | 取り込むシート名を指定します。 |
+|  |  | 指定しない場合は、一番左のシートが取り込まれます。 |
+| `--`header_line | 任意 | ヘッダー行の行番号を指定します。 |
+|  |  | 指定しない場合は、1行目がヘッダー行とみなされます。 |
+| `--`schema_file | 任意 | URLで指定したファイルの各列の型と取り込み有無を明示的に指定します。 |
+|  |  | 指定しない場合は、KIサーバーが自動で推定した型で取り込まれます。 |
+|  |  | 詳細は「[スキーマファイルのフォーマット](#スキーマファイルのフォーマット)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| URL | 必須 | 取り込み対象のファイルのURLを指定します。 |
+
+
+```
+$ ki dataset union_dataset add_http --dataset_id=2 http://storage.googleapis.com/test-bucket/sample.csv
+
+Dataset has been registered with ID 10.
+```
+
+### dataset union_dataset add_smb
+Windowsファイル共有やSMBサーバーでホストされているファイルを連結データセットに追加します。
+```
+ki dataset union_dataset add_smb --dataset_id DATASET_ID
+                                 [--name NAME]
+                                 [--qualifier {single,double,none}]
+                                 [--delimiter {comma,semicolon,tab,space}]
+                                 [--encoding {UTF-8,UTF-16,Latin-1,Shift-JIS,Windows-1252}]
+                                 [--sheet_name SHEET_NAME]
+                                 [--header_line HEADER_LINE]
+                                 [--schema_file SCHEMA_FILE]
+                                 --workgroup WORKGROUP
+                                 [-u USER]
+                                 [--password PASSWORD]
+                                 [--result]
+                                 file_path
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | データセットを追加する連結データセットのデータセットIDを指定します。 |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はファイル名が使用されます。 |
+| `--`qualifier | 任意 | file_pathで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`delimiter | 任意 | file_pathで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | CSVファイルの区切り文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`encoding | 任意 | file_pathで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | ファイルのエンコーディングを次のいずれかから指定します。 |
+|  |  | - UTF-8 |
+|  |  | - UTF-16 |
+|  |  | - Latin-1 |
+|  |  | - Shift-JIS |
+|  |  | - Windows-1252 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`sheet_name | 任意 | URLで指定したファイルがExcelファイルの場合のみ有効なオプションです。 |
+|  |  | 取り込むシート名を指定します。 |
+|  |  | 指定しない場合は、一番左のシートが取り込まれます。 |
+| `--`header_line | 任意 | ヘッダー行の行番号を指定します。 |
+|  |  | 指定しない場合は、1行目がヘッダー行とみなされます。 |
+| `--`schema_file | 任意 | file_pathで指定したファイルの各列の型と取り込み有無を明示的に指定します。 |
+|  |  | 指定しない場合は、KIサーバーが自動で推定した型で取り込まれます。 |
+|  |  | 詳細は「[スキーマファイルのフォーマット](#スキーマファイルのフォーマット)」を参照してください。 |
+| -u / `--`user | 任意 | 接続ユーザー名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`password | 任意 | 接続ユーザーのパスワードを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| `--`workgroup | 必須 | SMBサーバーのワークグループを指定します。 |
+| file_path | 必須 | SMBサーバーのホスト、およびホスト上での対象ファイルのパスを指定します。 |
+|  |  | 例)host/folder/file.csv |
+
+
+dataset add_smbコマンドと同様に、一部のパラメーターは対話型で設定できます。
+```
+$ ki dataset union_dataset add_smb --dataset_id=2 --workgroup=WG smb-server/test.csv
+Please enter username: user001
+Please enter password for the user user001:
+
+Dataset has been registered with ID 11.
+```
+
+### dataset union_dataset add_bigquery
+BigQueryのテーブルを連結データセットに追加します。
+```
+ki dataset union_dataset add_bigquery --dataset_id DATASET_ID
+                                      [--name NAME]
+                                      --gcp_project_id GCP_PROJECT_ID
+                                      --bigquery_dataset_id BIGQUERY_DATASET_ID
+                                      [--service_account_key CREDENTIAL_FILE]
+                                      [--table TABLE]
+                                      [--query QUERY]
+                                      [--result]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | データセットを追加する連結データセットのデータセットIDを指定します。 |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はBigQuery側のテーブル名が使用されます。 |
+| `--`gcp_project_id | 必須 | Google Cloud PlatformのプロジェクトIDを指定します。 |
+| `--`bigquery_dataset_id | 必須 | BigQueryのデータセットIDを指定します。 |
+| `--`service_account_key | 任意 | サービスアカウント認証用のJSONファイルのファイルパスを指定します。 |
+| `--`table | 任意 | 取り込むテーブル名を指定します。 |
+|  |  | 省略した場合は対話型で設定が可能です。 |
+| `--`query | 任意 | SQLを指定します。 |
+|  | ※省略した場合は対話型で設定 | SQLの実行結果が、データセットとして取り込まれます。 |
+|  |  | `--`queryを指定した場合は`--`tableの指定は不要です。 |
+|  |  | 省略した場合は対話型で設定が可能です。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+
+
+```
+$ ki dataset union_dataset add_bigquery --dataset_id=14834 --gcp_project_id=test_project --bigquery_dataset_id=example --service_account_key=serviceaccount.json --table=iris
+Dataset has been registered with ID 14843.
+```
+
+### dataset union_dataset add_s3
+Amazon S3でホストされているファイルを連結データセットに追加します。
+```
+ki dataset union_dataset add_s3 --dataset_id DATASET_ID
+                                [--name NAME]
+                                [--qualifier {single,double,none}]
+                                [--delimiter {comma,semicolon,tab,space}]
+                                [--encoding {UTF-8,UTF-16,Latin-1,Shift-JIS,Windows-1252}]
+                                [--sheet_name SHEET_NAME]
+                                [--header_line HEADER_LINE]
+                                [--schema_file SCHEMA_FILE]
+                                [--result]
+                                [--access_key_id ACCESS_KEY_ID]
+                                [--secret_access_key SECRET_ACCESS_KEY]
+                                URL
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | データセットを追加する連結データセットのデータセットIDを指定します。 |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はファイル名が使用されます。 |
+| `--`qualifier | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`delimiter | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`encoding | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | ファイルのエンコーディングを次のいずれかから指定します。 |
+|  |  | - UTF-8 |
+|  |  | - UTF-16 |
+|  |  | - Latin-1 |
+|  |  | - Shift-JIS |
+|  |  | - Windows-1252 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`sheet_name | 任意 | URLで指定したファイルがExcelファイルの場合のみ有効なオプションです。 |
+|  |  | 取り込むシート名を指定します。 |
+|  |  | 指定しない場合は、一番左のシートが取り込まれます。 |
+| `--`header_line | 任意 | ヘッダー行の行番号を指定します。 |
+|  |  | 指定しない場合は、1行目がヘッダー行とみなされます。 |
+| `--`schema_file | 任意 | URLで指定したファイルの各列の型と取り込み有無を明示的に指定します。 |
+|  |  | 指定しない場合は、KIサーバーが自動で推定した型で取り込まれます。 |
+|  |  | 詳細は「[スキーマファイルのフォーマット](#スキーマファイルのフォーマット)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| `--`access_key_id | 任意 | AWSのアクセスキーのIDを指定します。 |
+|  |  | 指定しない場合は、環境変数AWS_ACCESS_KEY_IDを参照します。 |
+| `--`secret_access_key | 任意 | AWSのシークレットアクセスキーを指定します。 |
+|  |  | 指定しない場合は、環境変数AWS_SECRET_ACCESS_KEYを参照します。 |
+| URL | 必須 | 取り込むオブジェクトのURLを指定します(s3://から始まる必要があります)。 |
+
+
+### dataset union_dataset add_gcs
+Google Cloud Storageでホストされているファイルを連結データセットに追加します。
+```
+ki dataset union_dataset add_gcs --dataset_id DATASET_ID
+                                 [--name NAME]
+                                 [--qualifier {single,double,none}]
+                                 [--delimiter {comma,semicolon,tab,space}]
+                                 [--encoding {UTF-8,UTF-16,Latin-1,Shift-JIS,Windows-1252}]
+                                 [--sheet_name SHEET_NAME]
+                                 [--header_line HEADER_LINE]
+                                 [--schema_file SCHEMA_FILE]
+                                 [--result]
+                                 [--service_account_key CREDENTIAL_FILE]
+                                 URL
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | データセットを追加する連結データセットのデータセットIDを指定します。 |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はファイル名が使用されます。 |
+| `--`qualifier | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | 各値の囲み文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`delimiter | 任意 | URLで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | CSVファイルの区切り文字を指定します。 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`encoding | 任意 | file_pathで指定したファイルがCSVファイルの場合のみ有効なオプションです。 |
+|  |  | ファイルのエンコーディングを次のいずれかから指定します。 |
+|  |  | - UTF-8 |
+|  |  | - UTF-16 |
+|  |  | - Latin-1 |
+|  |  | - Shift-JIS |
+|  |  | - Windows-1252 |
+|  |  | 指定しない場合はKIサーバーが自動で推定します。 |
+| `--`sheet_name | 任意 | URLで指定したファイルがExcelファイルの場合のみ有効なオプションです。 |
+|  |  | 取り込むシート名を指定します。 |
+|  |  | 指定しない場合は、一番左のシートが取り込まれます。 |
+| `--`header_line | 任意 | ヘッダー行の行番号を指定します。 |
+|  |  | 指定しない場合は、1行目がヘッダー行とみなされます。 |
+| `--`schema_file | 任意 | URLで指定したファイルの各列の型と取り込み有無を明示的に指定します。 |
+|  |  | 指定しない場合は、KIサーバーが自動で推定した型で取り込まれます。 |
+|  |  | 詳細は「[スキーマファイルのフォーマット](#スキーマファイルのフォーマット)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| `--`service_account_key | 任意 | サービスアカウント認証用のJSONファイルのファイルパスを指定します。 |
+| URL | 必須 | 取り込むオブジェクトのURLを指定します(gs://から始まる必要があります)。 |
+
+### dataset union_dataset add_salesforce
+Salesforceオブジェクトを連結データセットに追加します。
+```
+ki dataset union_dataset add_salesforce --dataset_id DATASET_ID
+                                        [--name NAME]
+                                        -h HOST
+                                        [-u USER]
+                                        [--password PASSWORD]
+                                        [--security_token SECURITY_TOKEN]
+                                        [--table TABLE]
+                                        [--filter_soql FILTER_SOQL]
+                                        [--result]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | データセットを追加する連結データセットのデータセットIDを指定します。 |
+| `--`name | 任意 | 取り込み時のデータセット名を指定します。 |
+|  |  | 省略した場合はオブジェクト名が使用されます。 |
+| -h / `--`host | 必須 | Salesforceのホスト名を入力します。 |
+| -u / `--`user | 任意 | 接続ユーザー名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`password | 任意 | 接続ユーザーのパスワードを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`security_token | 任意 | セキュリティトークンを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`table | 任意 | 取り込み対象のオブジェクト名を指定します。 |
+|  | ※省略した場合は対話型で設定 |  |
+| `--`filter_soql | 任意 | 取り込み対象の項目を絞り込むためのSOQLによるフィルター条件を指定します。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたdataset_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+
+詳細な使用方法については、「[dataset add_salesforce](#dataset-add_salesforce)」を参照してください。
+
+### dataset acl get
+指定したデータセットに設定されているユーザー、およびグループに対する権限設定を取得します。
+```
+ki dataset acl get [--table | --json | --text]
+                   [--delimiter {comma,semicolon,tab,space}]
+                   [--quote {single,double,none}]
+                   --dataset_id DATASET_ID
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | 権限を取得する対象データセットのIDを指定します。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+permissionはOWNER(所有者)、WRITE(編集可能)、READ(閲覧のみ)の3種類です。
+```
+$ ki dataset acl get --dataset_id=14833
+|  type  |                  id                  |     name      |  permission  |
+|--------+--------------------------------------+---------------+--------------|
+|  USER  | 671ed042-9b8e-47ee-b262-47da8c61c7fd | poweruser001  |    WRITE     |
+| GROUP  | f4affd10-ac57-400b-8c99-7f7284b16992 |   group001    |     READ     |
+|  USER  | 06b691da-b3a2-44db-bab2-91d162a98c7e |   admin001    |     OWNER    |
+```
+idは共有対象がユーザーであればユーザーID、ユーザーグループであればグループIDが出力されます。
+
+### dataset acl set
+特定のデータセットの権限設定をおこないます。
+```
+ki dataset acl set --dataset_id DATASET_ID
+                   (-u USER_ID | --group_id GROUP_ID)
+                   [--permission {OWNER,WRITE,READ}]
+                   [--recursive]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | 権限を設定する対象データセットのIDを指定します。 |
+| -u / `--`user_id | 必須 | 権限を設定する対象ユーザーを指定します。 |
+|  | ※`--`user_idか`--`group_idいずれかの指定が必要 |  |
+| `--`group_id | 必須 | 権限を設定する対象グループを指定します。 |
+|  | ※`--`user_idか`--`group_idいずれかの指定が必要 |  |
+| `--`permission | 任意 | 権限種別を指定します。 |
+|  |  | 設定できる権限種別はOWNER(所有者)、WRITE(編集可能)、READ(閲覧のみ)の3種類です。 |
+| `--`recursive | 任意 | dataset_idで指定したデータセットがフォルダーの場合のみ有効なオプションです。 |
+|  |  | フォルダー内のデータセットを再帰的に検索して権限設定をおこないます。 |
+
+以下は、ユーザーにREAD権限を付与する場合の実行例です。
+```
+$ ki dataset acl set --dataset_id=133 --user_id=37b87f69-9792-4963-a03a-94a114d4474d --permission=READ
+Permission has been set successfully.
+```
+
+### dataset acl rm
+指定したデータセットからユーザー、およびグループに対する権限設定を削除します。
+```
+ki dataset acl rm --dataset_id DATASET_ID
+                  (-u USER_ID | --group_id GROUP_ID)
+                  [--recursive]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`dataset_id | 必須 | 権限を削除する対象データセットのIDを指定します。 |
+| -u / `--`user_id | 必須 | 権限を削除する対象ユーザーを指定します。 |
+|  | ※`--`user_idか`--`group_idいずれかの指定が必要 |  |
+| `--`group_id | 必須 | 権限を削除する対象グループを指定します。 |
+|  | ※`--`user_idか`--`group_idいずれかの指定が必要 |  |
+| `--`recursive | 任意 | dataset_idで指定したデータセットがフォルダーの場合のみ有効なオプションです。 |
+|  |  | フォルダー内のデータセットを再帰的に検索して権限設定の削除をおこないます。 |
+
+
+```
+$ ki dataset acl rm --dataset_id=133 --user_id=37b87f69-9792-4963-a03a-94a114d4474d
+Permission has been removed successfully.
+```
+### df
+KIサーバー内のディスクの空き容量を確認します。
+```
+$ ki df
+Free disk space: 163 GB
+```
+
+### driver ls
+登録済みのドライバーファイル一覧を表示します。\
+dataset add_jdbcで使用します。
+```
+ki driver ls [-t {jdbc,tableau}]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| -t / `--`type | 任意 | 絞り込む種別を指定します。 |
+|  |  | 指定しない場合はすべての種別のドライバーファイルが表示されます。 |
+
+
+```
+$ ki driver ls
+mssql-jdbc-7.2.2.jre8.jar
+postgres-jdbc.jar
+```
+
+### driver add
+ドライバーファイルを追加します。
+```
+ki driver add -t {jdbc,tableau}
+              driver_file
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| -t / `--`type | 必須 | 追加するドライバーファイルの種別を指定します。 |
+| driver_file | 必須 | アップロードするドライバーファイルのパスを指定します。 |
+
+
+
+```
+$ ki driver add --type=jdbc mssql-jdbc-7.2.2.jre8.jar
+
+jdbc driver mssql-jdbc-7.2.2.jre8.jar has been registered successfully.
+```
+### log download
+指定した期間のシステムログをZIP圧縮形式でダウンロードします。
+```
+ki log download [--date DATE]
+                [--start_date START_DATE]
+                [--end_date END_DATE]
+                [--overwrite]
+                file_path
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`start_date | 任意 | ログの取得期間の開始日を指定します(yyyy/mm/dd形式)。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`end_date | 任意 | ログの取得期間の終了日を指定します(yyyy/mm/dd形式)。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`date | 任意 | ログの取得期間を1日だけ指定する場合、`--`start_date、`--`end_dateの指定をこのフラグで代替できます(yyyy/MM/dd形式)。 |
+|  |  | `--`start_date/`--`end_date、またはこのフラグのいずれかの指定が必須になります。 |
+| file_path | 必須 | ダウンロードしたログを配置するパスを指定します。 |
+| `--`overwrite | 任意 | このパラメーターを指定した場合、file_pathで指定したパスにファイルが存在するとき、新しいファイルで上書きします。 |
+
+
+以下のようにdateコマンドと組み合わせて、取得日から1週間分のログを一括で取得することもできます。
+```
+$ TODAY="$(date '+%Y/%m/%d')"
+$ A_WEEK_AGO="$(date --date "7 days ago ${TODAY}" '+%Y/%m/%d')"
+$ FILE_PATH="ki-$(date --date "${A_WEEK_AGO}" '+%Y%m%d')-$(date --date "${TODAY}" '+%Y%m%d').zip"
+
+$ ki log download --start_date="${A_WEEK_AGO}" --end_date="${TODAY}" "${FILE_PATH}" --overwrite --wait_count=100
+
+Log file has been downloaded to ki-20230302-20230309.zip.
+```
+
+### log download_usage
+指定した日数の利用状況データをZIP圧縮形式でダウンロードします。
+```
+ki log download_usage [--period {120,360,all}]
+                      [--overwrite]
+                      file_path
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`period | 任意 | 何日分の利用状況データを取得するかを指定します。 |
+|  |  | 以下のいずれかを指定してください。 |
+|  |  | - 120 |
+|  |  | - 360 |
+|  |  | - all |
+|  |  | allを指定すると全期間の利用状況データを取得します。 |
+| `--`overwrite | 任意 | このパラメーターを指定した場合、file_pathで指定したパスにファイルが存在するとき、新しいファイルで上書きします。 |
+| file_path | 必須 | ダウンロードしたログを配置するパスを指定します。 |
+
+```
+$ ki log download_usage --period=120 ki-usage.zip --overwrite
+
+Log file has been downloaded to ki-usage.zip.
+```
+
+
+### project ls
+プロジェクト一覧を表示します。
+```
+ki project ls [-f FOLDER | --all]
+              [-tz TIMEZONE]
+              [--table | --json | --text]
+              [--delimiter {comma,semicolon,tab,space}]
+              [--quote {single,double,none}]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| -f / `--`folder | 任意 | 特定のFOLDERの中身を表示します。 |
+|  |  | typeがFOLDERのプロジェクトのproject_idを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`all | 任意 | フォルダーの中身も含め、すべてのプロジェクトを表示します。 |
+| -tz / `--`timezone | 任意 | created_at、last_updated_atのタイムゾーン(Asia/Tokyoなど)を指定します。 |
+|  |  | デフォルトでは、コマンドを実行している環境のタイムゾーン設定が用いられます。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+
+プロジェクト関連のコマンドで指定するproject_idは、このコマンドの実行結果から確認できます。
+```
+$ ki project ls
+|  type   |  project_id  |  project_name  |  description  |  size   |  created_user  |     created_at      |     updated_at      |
+|---------+--------------+----------------+---------------+---------+----------------+---------------------+---------------------|
+| FOLDER  |     105      |   Folder001    |               |    0    |    admin001    | 2023/07/21 14:31:48 | 2023/07/21 14:31:48 |
+| PROJECT |      38      |   Project001   |               | 6234112 |    admin001    | 2023/02/15 16:21:17 | 2023/02/15 16:22:12 |
+| PROJECT |      37      |   Project002   |               | 6234112 |    admin001    | 2023/02/15 16:21:03 | 2023/02/15 16:21:57 |
+```
+
+### project import_template
+プロジェクトテンプレートファイル(.kit)をアップロードして、プロジェクトを作成します。
+```
+ki project import_template [-f FOLDER]
+                           --template_file TEMPLATE_FILE
+                           [--name NAME]
+                           [--description DESCRIPTION]
+                           [--result]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| -f / `--`folder | 任意 | 指定したフォルダー内にプロジェクトが作成されます。 |
+|  |  | 指定しない場合はルートに作成されます。 |
+|  |  | 詳細については、「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`template_file | 必須 | テンプレートファイル (.kit) のパスを指定します。 |
+| `--`name | 任意 | 作成するプロジェクト名を指定します。 |
+| `--`description | 任意 | 作成するプロジェクトの説明を設定します。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたプロジェクトのproject_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+
+
+
+
+```
+$  ki project import_template --name "来場者分析" --template_file="./来場者・成約者分析（注文住宅）-2.2.0.kit"
+Project has been imported with ID 357.
+```
+
+### project mkdir
+指定した名前でプロジェクト一覧にフォルダーを作成します。\
+特定のフォルダー内にフォルダーを作成したい場合は、-f/`--`folderオプションで指定します。
+```
+ki project mkdir [-f FOLDER]
+                 [--result]
+                 name
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| -f / `--`folder | 任意 | 指定したフォルダー内にフォルダーが作成されます。 |
+|  |  | 指定しない場合はルートに作成されます。 |
+|  |  | 詳細については、「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたフォルダーのproject_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| name | 必須 | 作成するフォルダー名を指定します。 |
+
+特定のフォルダーに作成する場合は、以下のように実行してください。
+```
+$ ki project mkdir Folder001
+Folder Folder001 has been created with ID 110.
+$ ki project mkdir -f 110 Folder002
+Folder Folder002 has been created with ID 111.
+```
+
+### project mv
+プロジェクトを特定のフォルダーに移動します。
+```
+ki project mv --project_id PROJECT_ID
+              -f FOLDER
+              [--apply_dest_permission]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 移動するプロジェクトのIDを指定します。 |
+| -f / `--`folder | 必須 | 移動先のフォルダーのproject_idを指定します。 |
+|  |  | ルートに移動する場合は0を指定してください。 |
+| `--`apply_dest_permission | 任意 | このパラメーターを指定すると、移動したプロジェクトのアクセス権限が移動先のフォルダーのアクセス権限に合わせられます。 |
+|  |  | 指定しない場合は、プロジェクトの元のアクセス権限が維持されます。 |
+
+
+```
+$  ki project mv --project_id=116 --folder=0
+Project has been moved successfully.
+```
+
+### project cp
+プロジェクトを複製します。
+```
+ki project cp --project_id PROJECT_ID
+              [-f FOLDER]
+              [--result]
+              [--apply_dest_permission]
+              name
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 複製対象のプロジェクトのID |
+| -f / `--`folder | 任意 | プロジェクトのコピー先のフォルダーを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、複製によって作成されたプロジェクトのproject_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| `--`apply_dest_permission | 任意 | このパラメーターを指定すると、複製によって作成されるプロジェクトのアクセス権限が作成先のフォルダーのアクセス権限に合わせられます。 |
+| name | 必須 | 複製によって作成されるプロジェクトの名前を指定します。 |
+
+
+更新前に事前に特定のフォルダーにプロジェクトの状態をアーカイブしたい場合は、dateコマンドと組み合わせて以下のように実装できます。
+```
+$ ki project cp --project_id=108 --folder=111 "demo$(date '+%Y%m%d')"
+Project has been copied as ID 116.
+```
+
+### project rm
+プロジェクトを削除します。
+```
+ki project rm --project_id PROJECT_ID
+              [--force]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 削除対象のプロジェクトのIDを指定します。 |
+| -f / `--`force | 任意 | このパラメーターを指定すると、ロックがかかっている分析アプリが含まれている場合でも強制的に削除します。 |
+
+```
+$  ki project rm --project_id=116
+Project has been removed successfully.
+```
+
+### project run_workflow
+指定したプロジェクトのフロー実行をおこないます。
+```
+ki project run_workflow --project_id PROJECT_ID
+                        [--async]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | フロー実行対象のプロジェクトのIDを指定します。 |
+| `--`async | 任意 | このパラメーターを指定した場合、ワークフローの実行完了まで待たずにtask_idを標準出力に出力して終了します。 |
+|  |  | 詳細は「[`--`asyncオプションとtask waitコマンド](#--asyncオプションとtask-waitコマンド)」を参照してください。 |
+
+
+```
+$ ki project run_workflow --project_id=7907 --async
+657118f8-c911-4346-90fc-7ceed71249c4
+```
+
+### project acl get
+指定したプロジェクトに設定されているユーザー、およびグループに対する権限設定を取得します。
+```
+ki project acl get --project_id PROJECT_ID
+                   [--table | --json | --text]
+                   [--delimiter {comma,semicolon,tab,space}]
+                   [--quote {single,double,none}]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 権限を取得する対象のプロジェクトのIDを指定します。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+permissionはOWNER(所有者)、WRITE(編集可能)、READ(閲覧のみ)の3種類です。
+```
+ki project acl get --project_id=108
+|  type  |                  id                  |     name       |  permission  |
+|--------+--------------------------------------+----------------+--------------|
+|  USER  | 671ed042-9b8e-47ee-b262-47da8c61c7fd |  poweruser001  |    OWNER     |
+| GROUP  | 5d99da52-70e1-4778-a92b-6f17d38f01e7 |    group001    |     READ     |
+|  USER  | 471a7898-7bba-425a-86f3-b70aa276ead7 |    admin001    |    WRITE     |
+```
+idは共有対象がユーザーであればユーザーID、ユーザーグループであればグループIDが出力されます。
+
+### project acl set
+特定のプロジェクトの権限設定をおこないます。
+```
+ki project acl set --project_id PROJECT_ID
+                   (-u USER_ID | --group_id GROUP_ID)
+                   [--permission {OWNER,WRITE,READ}]
+                   [--recursive]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 権限を設定するプロジェクトのIDを指定します。 |
+| -u / `--`user_id | 必須 | 権限を設定する対象ユーザーを指定します。 |
+|  | ※`--`user_idか`--`group_idいずれかの指定が必要 |  |
+| `--`group_id | 必須 | 権限を設定する対象グループを指定します。 |
+|  | ※`--`user_idか`--`group_idいずれかの指定が必要 |  |
+| `--`permission | 任意 | 権限種別を指定します。 |
+|  |  | 設定できる権限種別はOWNER(所有者)、WRITE(編集可能)、READ(閲覧のみ)の3種類です。 |
+| `--`recursive | 任意 | project_idで指定したプロジェクトがフォルダーの場合のみ有効なオプションです。 |
+|  |  | フォルダー内のプロジェクトを再帰的に検索して権限設定をおこないます。 |
+
+
+以下は、グループにREAD権限を付与する場合の実行例です。
+```
+$ ki project acl set --project_id=108 --group_id=43981fbe-bb08-416c-989d-ba484a668b6d --permission=READ
+Permission has been set successfully.
+```
+
+### project acl rm
+特定のプロジェクトからユーザー、およびグループに対する権限設定を削除します。
+```
+ki project acl rm --project_id PROJECT_ID
+                  (-u USER_ID | --group_id GROUP_ID)
+                  [--recursive]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 権限を削除する対象のプロジェクトのIDを指定します。 |
+| -u / `--`user_id | 必須 | 権限を削除する対象ユーザー |
+|  | ※`--`user_idか`--`group_idいずれかの指定が必要 |  |
+| `--`group_id | 必須 | 権限を削除する対象グループ |
+|  | ※`--`user_idか`--`group_idいずれかの指定が必要 |  |
+| `--`recursive | 任意 | フォルダー内のプロジェクトを再帰的に検索して権限設定を削除します。 |
+|  |  | このパラメーターは、project_idで指定したプロジェクトがフォルダーの場合のみ有効です。 |
+
+以下は、グループに対する権限設定を削除する場合の実行例です。
+```
+$ ki project acl rm --project_id=108 --group_id=43981fbe-bb08-416c-989d-ba484a668b6d
+Permission has been removed successfully.
+```
+
+### project app ls
+プロジェクトに対して作成済みの分析一覧を取得します。
+```
+ki project app ls --project_id PROJECT_ID
+                  [-f FOLDER | --all]
+                  [-tz TIMEZONE]
+                  [--table | --json | --text]
+                  [--delimiter {comma,semicolon,tab,space}]
+                  [--quote {single,double,none}]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 分析一覧を表示するプロジェクトのIDを指定します。 |
+| -f / `--`folder | 任意 | 特定のFOLDERの中身を表示します。 |
+|  |  | typeがFOLDERの分析アプリのapp_idを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`all | 任意 | フォルダーの中身も含めてすべてのアプリケーションを表示します。 |
+| -tz / `--`timezone | 任意 | created_at、last_updated_atのタイムゾーン(Asia/Tokyoなど)を指定します。 |
+|  |  | デフォルトでは、コマンドを実行している環境のタイムゾーン設定が用いられます。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+分析アプリ関連のコマンドで指定するapp_idは、このコマンドの実行結果から確認できます。
+```
+$ ki project app ls --project_id=1
+|  type  |  app_id  |  app_name   |  description  |  status  |  locked  |  created_user  |     created_at      |     updated_at      |
+|--------+----------+-------------+---------------+----------+----------+----------------+---------------------+---------------------|
+| FOLDER |    1     |  Folder001  |               | CREATED  |  False   |    admin001    | 2023/07/21 14:50:13 | 2023/07/21 14:50:13 |
+| MATRIX |    3     | マトリックス001 |               | CREATED  |   True   |    admin001    | 2023/07/21 14:51:33 | 2023/07/21 14:51:37 |
+| FACTOR |    4     |  要因ツリー001   |               | CREATED  |  False   |    admin001    | 2023/07/21 14:52:03 | 2023/07/21 14:52:08 |
+|  AFE   |    5     |   AFE001    |               | CREATED  |  False   |    admin001    | 2023/07/21 14:52:26 | 2023/07/21 14:52:26 |
+| TARGET |    6     | ターゲットリスト001 |               | CREATED  |  False   |    admin001    | 2023/07/21 14:53:57 | 2023/07/21 14:53:57 |
+```
+
+### project app mkdir
+プロジェクトの分析一覧にフォルダーを作成します。\
+特定のフォルダーの中にフォルダーを作成したい場合は -f / `--`folderオプションを指定します。
+```
+ki project app mkdir --project_id PROJECT_ID
+                     [-f FOLDER]
+                     [--result]
+                     name
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project | 必須 | 分析アプリ用フォルダーを作成するプロジェクトのIDを指定します。 |
+| -f / `--`folder | 任意 | 指定したフォルダー内にフォルダーが作成されます。 |
+|  |  | 指定しない場合はルートに作成されます。 |
+|  |  | 詳細については、「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたフォルダーのproject_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| name | 必須 | 作成するフォルダー名を指定します。 |
+
+データアナリティクス > 販促という階層で作成したい場合は以下のように実行してください。
+```
+$ fid="$(ki project app mkdir --project_id=1 データアナリティクス --result)"
+$ ki project app mkdir --project_id=1 --folder=$fid 販促
+Folder has been created with ID 6.
+```
+
+### project app mv
+分析アプリを特定のフォルダーに移動します。
+```
+ki project app mv --project_id PROJECT_ID
+                  --app_id APP_ID
+                  -f FOLDER
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project | 必須 | 移動する分析アプリが所属するプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | 移動する分析アプリのIDを指定します。 |
+| -f / `--`folder | 必須 | 移動先のフォルダーのapp_idを指定します。 |
+|  |  | ルートに移動する場合は0を指定してください。 |
+
+```
+$ ki project app mv --project_id=1 --app_id=3 --folder=6
+Application has been moved successfully.
+```
+
+### project app rename
+分析アプリの名前を変更します。
+```
+ki project app rename --project_id PROJECT_ID
+                      --app_id APP_ID
+                      name
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project | 必須 | 名前を変更する分析アプリが所属するプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | 名前を変更する分析アプリのIDを指定します。 |
+| name | 必須 | 変更後の名前を指定します。 |
+
+```
+$ ki project app rename --project_id=1 --app_id=3 マトリックス002
+Application has been renamed successfully.
+```
+
+### project app cp
+分析アプリを複製します。
+```
+ki project app cp --project_id PROJECT_ID
+                  --app_id APP_ID
+                  [-f FOLDER]
+                  [--result]
+                  name
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project | 必須 | 複製対象の分析アプリが所属するプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | 複製対象の分析アプリのIDを指定します。 |
+| -f / `--`folder | 任意 | 分析アプリの複製先のフォルダーを指定します。 |
+|  |  | 指定しない場合はルートに作成されます。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`result | 任意 | このパラメーターを指定すると、複製によって作成された分析アプリのapp_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| name | 必須 | 複製によって作成される分析アプリの名前を指定します。 |
+
+更新前に事前に特定のフォルダーに分析アプリをバックアップしたい場合は、dateコマンドと組み合わせて以下のように実装できます。
+```
+$ ki project app cp --project_id=1 --app_id=3 --folder=6 "マトリックス001_$(date '+%Y%m%d')"
+Application has been copied as ID 8.
+```
+
+### project app rm
+分析アプリを削除します。
+```
+ki project app rm --project_id PROJECT_ID
+                  --app_id APP_ID
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 削除対象の分析アプリが所属するプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | 削除対象の分析アプリのIDを指定します。 |
+
+```
+$ ki project app rm --project_id=1 --app_id=8
+Application has been removed successfully.
+```
+
+### project app reload
+分析アプリを更新し、参照する分析用データを最新にします。
+```
+ki project app reload --project_id PROJECT_ID
+                      --app_id APP_ID, ...
+                      [--run_workflow]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 更新する分析アプリが所属するプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | 更新する分析アプリのIDを指定します。 |
+|  |  | このパラメーターは、更新する分析アプリの数だけ指定することができ、複数の分析アプリを一括で更新できます。 |
+| `--`run_workflow | 任意 | このパラメーターを指定すると、ワークフローが実行されてデータセットの更新もおこなわれます。 |
+
+app_idが1の分析アプリと2の分析アプリを一括で更新する場合は、以下のように実行します。
+```
+$ ki project app reload --project_id=1 --app_id=1 --app_id=2
+Application data has been reloaded successfully.
+```
+
+### project app lock
+分析アプリをロックします。
+```
+ki project app lock --project_id PROJECT_ID
+                    --app_id APP_ID
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | ロックしたい分析アプリが所属するプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | ロックしたい分析アプリのIDを指定します。 |
+
+project app lsコマンドを使用して、ロックしたい分析アプリのapp_idを確認します。
+```
+$ ki project app ls --project_id=1
+|  type  |  app_id  |  app_name   |  description  |  status  |  locked  |  created_user  |     created_at      |     updated_at      |
+|--------+----------+-------------+---------------+----------+----------+----------------+---------------------+---------------------|
+| FACTOR |    1     |  要因ツリー001   |               | CREATED  |  False   |    admin001    | 2023/07/21 14:52:03 | 2023/07/21 14:52:08 |
+
+$ ki project app lock --project_id=1 --app_id=1
+Application has been locked successfully.
+
+|  type  |  app_id  |  app_name   |  description  |  status  |  locked  |  created_user  |     created_at      |     updated_at      |
+|--------+----------+-------------+---------------+----------+----------+----------------+---------------------+---------------------|
+| FACTOR |    1     |  要因ツリー001   |               | CREATED  |   True   |    admin001    | 2023/07/21 14:52:03 | 2023/07/21 14:52:08 |
+```
+
+### project app unlock
+分析アプリをアンロックします。
+```
+ki project app unlock --project_id PROJECT_ID
+                      --app_id APP_ID
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | アンロックしたい分析アプリが所属するプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | アンロックしたい分析アプリのIDを指定します。 |
+
+実行例は以下のとおりです。
+```
+$ ki project app unlock --project_id=1 --app_id=1
+Application has been unlocked successfully.
+
+$ ki project app ls --project_id=1
+|  type  |  app_id  |  app_name   |  description  |  status  |  locked  |  created_user  |     created_at      |     updated_at      |
+|--------+----------+-------------+---------------+----------+----------+----------------+---------------------+---------------------|
+| FACTOR |    1     |  要因ツリー001   |               | CREATED  |  False   |    admin001    | 2023/07/21 14:52:03 | 2023/07/21 14:52:08 |
+```
+
+### project app target_list set_prediction_date
+ターゲットリストの予測基準日を設定します。
+```
+ki project app target_list set_prediction_date --project_id PROJECT_ID
+                                               --app_id APP_ID
+                                               --prediction_date PREDICTION_DATE
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象のターゲットリストが所属しているプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | 対象のターゲットリストのIDを指定します。 |
+| `--`prediction_date | 必須 | 予測基準日を指定します(yyyy/MM/dd形式)。 |
+
+以下は、予測基準日を2019年1月30日に設定する場合の実行例です。
+```
+$ ki project app target_list set_prediction_date --project_id=1 --app_id=6 --prediction_date=2019/01/30
+Prediction date of the target list app with ID 2 has been set to 2019/01/30.
+```
+
+### project app target_list export
+ターゲットリストをZIP圧縮形式のCSVファイルでエクスポートします。
+```
+ki project app target_list export --project_id PROJECT_ID
+                                  --app_id APP_ID
+                                  [--only_members]
+                                  [--overwrite]
+                                  [--schema]
+                                  [--table | --json | --text]
+                                  [--delimiter {comma,semicolon,tab,space}]
+                                  [--quote {single,double,none}]
+                                  file_path
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象のターゲットリストが所属しているプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | 対象のターゲットリストのIDを指定します。 |
+| `--`only_members | 任意 | このパラメーターを指定すると、該当するメンバーのデータのみに絞り込まれ、該当/非該当の真偽値列は省略されます。 |
+|  |  | 指定しない場合は、該当/非該当の真偽値列が含まれたフォーマットで全件出力されます。 |
+| `--`overwrite | 任意 | このパラメーターを指定した場合、file_pathで指定したパスにファイルが存在するとき、新しいファイルで上書きします。 |
+| `--`schema | 任意 | このパラメーターを指定した場合、出力するターゲットリストのCSVファイルのデータスキーマを表示します。 |
+|  |  | Command substitutionで受け取り、クエリ生成などに使用できます。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | データスキーマの表示方法を指定します。 |
+|  |  | 詳細は、「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+|  |  | このパラメーターは、`--`schemaオプションが指定された場合のみ有効です。 |
+| file_path | 必須 | ダウンロードしたターゲットリストファイルを配置するパスを指定します。 |
+
+以下は、ターゲットリストをエクスポートして解凍する場合の実行例です。
+```
+$ ki project app target_list export --project_id=1 --app_id=2 リスク顧客.zip
+Target list has been downloaded to リスク顧客.zip in ZIP format.
+$  unzip リスク顧客.zip
+Archive:  リスク顧客.zip
+  inflating: リスク顧客.csv
+```
+
+### project app target_list save_to_datasets
+データセット一覧にターゲットリストを保存します。
+```
+ki project app target_list save_to_datasets --project_id PROJECT_ID
+                                            --app_id APP_ID
+                                            [--only_members]
+                                            [--overwrite]
+                                            [-f FOLDER]
+                                            name
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象のターゲットリストが所属しているプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | 対象のターゲットリストのIDを指定します。 |
+| `--`only_members | 任意 | このパラメーターを指定すると、該当するメンバーのデータのみに絞り込まれ、該当/非該当の真偽値列は省略されます。 |
+|  |  | 指定しない場合は、該当/非該当の真偽値列が含まれたフォーマットで全件出力されます。 |
+| `--`overwrite | 任意 | このパラメーターを指定した場合、同名のデータセットがすでに存在するとき、内容を上書きします。 |
+| -f / `--`folder | 任意 | 保存先のフォルダーを指定します。 |
+|  |  | typeがFOLDERのデータセットのdataset_idを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| name | 必須 | 保存するデータセット名を指定します。 |
+
+以下は、データセット一覧に保存する場合の実行例です。
+```
+$ ki project app target_list save_to_datasets --project_id=1 --app_id=2  リスク顧客
+Target list has been saved as dataset リスク顧客 successfully.
+```
+
+
+なお、`--`overwriteオプションは、スキーマに変更がある場合の上書きには対応していません。\
+たとえば、`--`only_membersを指定するとターゲットリスト対象に該当/非該当の真偽値列が含まれず、1列少なくなるため、`--`overwriteを指定してもエラーになります。
+
+```
+$ ki project app target_list save_to_datasets --project_id=1 --app_id=2  "離反リスク顧客" --only_members
+Target list has been saved as dataset 離反リスク顧客 successfully.
+$ ki project app target_list save_to_datasets --project_id=1 --app_id=2  "離反リスク顧客" --overwrite
+
+Failed to output. 離反リスク顧客
+The number of columns in the datasets are different.
+```
+
+### project app target_list schema
+ターゲットリストテーブルのスキーマを取得します。\
+主に後述のproject app target_list export_to_databaseコマンドやproject app target_list export_jdbcコマンドにおいて、列名のマッピングを指定したい際の参考情報として使用します。
+```
+ki project app target_list schema --project_id PROJECT_ID
+                                  --app_id APP_ID
+                                  [--table | --json | --text]
+                                  [--delimiter {comma,semicolon,tab,space}]
+                                  [--quote {single,double,none}]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象のターゲットリストが所属しているプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | 対象のターゲットリストのIDを指定します。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+```
+$ ki project app target_list schema --project_id=4 --app_id=2
+|               column_id                |         column_name         |  column_type  |
+|----------------------------------------+-----------------------------+---------------|
+|                df1_0001                |            顧客ID             |    integer    |
+|                 score                  |             スコア             |    integer    |
+|                  pred                  |             集計値             |    decimal    |
+|                df1_0005                |             離反              |    integer    |
+|                df1_0002                |             性別              |    string     |
+|                df1_0003                |             年代              |    integer    |
+|                df1_0004                |          会員ポイント残高           |    integer    |
+|                df1_0006                |          店舗での最終購買日          |     date      |
+| c_bcf7804b_2619_4d74_bb9f_24c01cfc7320 |         WEBアクセス の数          |    integer    |
+| c_b70ff04a_9325_44fc_a78f_a1b5880016c3 |     アクセス日時 の最終日からの経過日数      |    integer    |
+| c_701757db_b2da_43de_9cc8_baf1f240bd5f |       ページ種別 が 商品動画 の数       |    integer    |
+| c_a1ce4cba_9397_47ca_afca_1b555b21d3fc | 直近14日における 1日あたりの アクセス日時 の数  |    decimal    |
+| c_a14ee64a_c289_4590_a7b5_6897b0614227 | 直近14日における ページ種別 が キャンペーン の数 |    integer    |
+| c_15d52c84_d592_4b2b_adb3_c9cceddd4cee |  直近14日における ページ種別 が 商品紹介 の数  |    integer    |
+| c_38f75c53_fcb8_4f16_9279_2f88e29def89 |  直近14日における ページ種別 が 会員情報 の数  |    integer    |
+| c_39d8133f_cb51_44a7_ab5c_22a51518a792 |  直近14日における ページ種別 が その他 の数   |    integer    |
+| s_34b6c623_e930_4c33_b94a_7b4e67cceebe |       会員ポイント残高 ≧ 770        |    integer    |
+| s_73669f54_db71_486c_8f85_14a643aba9d8 |     ページ種別 が 商品動画 の数 ≧ 5     |    integer    |
+| s_c089eb6d_2c62_4519_842e_ab9025e7d13a |       WEBアクセス の数 ≧ 11       |    integer    |
+| s_d7ac571b_0554_488c_be89_e89b6e3c862d |   アクセス日時 の最終日からの経過日数 ≦ 4    |    integer    |
+| s_7b0da1a7_356d_4c88_9501_9959d1abf287 |        年代 が 30 ～ 59         |    integer    |
+| s_8b01d1f7_6096_44c4_a244_8ccf3e82c12d |           性別 = 女性           |    integer    |
+```
+
+### project app target_list export_to_database
+ターゲットリストを外部データベースにエクスポートします。
+```
+ki project app target_list export_to_database --project_id PROJECT_ID
+                                              --app_id APP_ID
+                                              --database_type {POSTGRESQL,ORACLE,MYSQL,SQLSERVER}
+                                              -h HOST
+                                              [-p PORT]
+                                              [--database DATABASE]
+                                              [-u USER]
+                                              [--password PASSWORD]
+                                              [--schema SCHEMA]
+                                              [--table TABLE]
+                                              [--write_strategy {CREATE,INSERT,DROP_AND_CREATE,TRUNCATE_AND_INSERT,CREATE_OR_OVERWRITE}]
+                                              [--column_mapping_file COLUMN_MAPPING_FILE]
+                                              [--only_members]
+                                              [--disable_transaction]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象のターゲットリストが所属するプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | 対象のターゲットリストのIDを指定します。 |
+| `--`database_type | 必須 | 接続先データベースの種別を以下のいずれかから指定します。 |
+|  |  | - POSTGRESQL |
+|  |  | - ORACLE |
+|  |  | - MYSQL |
+|  |  | - SQLSERVER |
+| -h / `--`host | 必須 | 接続先データベースのKIサーバーから解決可能なアドレスを指定します。 |
+| -p / `--`port | 任意 | 接続先データベースの接続ポートを指定します。 |
+|  |  | 省略した場合は、データベース種別に応じてデフォルトのポートが選択されます。 |
+| `--`database | 任意 | 接続先のデータベース名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| -u / `--`user | 任意 | 接続ユーザー名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`password | 任意 | 接続ユーザーのパスワードを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`schema | 任意 | 出力先のテーブルが属するスキーマを指定します。 |
+|  |  | スキーマを指定することで、対話型でテーブルを選択する場合にテーブル一覧が絞り込まれます。 |
+| `--`table | 任意 | 出力先のテーブル名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`write_strategy | 任意 | 出力先データベースへのテーブルの書き込み方法を指定します。 |
+|  |  | 詳細は「[`--`write_strategyオプション](#--write_strategyオプション)」を参照してください。 |
+|  |  | 指定しない場合は、「CREATE」が適用されます。 |
+| `--`column_mapping_file | 任意 | KI内のcolumn_id、および出力先DBにおける列名のマッピングをおこなう設定ファイルのパスを指定します。 |
+|  |  | 詳細は 「[`--`column_mapping_fileオプション](#--column_mapping_fileオプション)」を参照してください。 |
+| `--`only_members | 任意 | このパラメーターを指定すると、該当するメンバーのデータのみに絞り込まれ、該当/非該当の真偽値列は省略されます。 |
+|  |  | 指定しない場合は、該当/非該当の真偽値列が含まれたフォーマットで全件出力されます。 |
+| `--`disable_transaction | 任意 | このパラメーターを指定すると、取り込み時のトランザクションを無効化します。 |
+
+
+### project app target_list export_jdbc
+JDBCを用いて、外部ソースにターゲットリストをエクスポートします。
+```
+ki project app target_list export_jdbc --project_id PROJECT_ID
+                                       --app_id APP_ID
+                                       --connection CONNECTION
+                                       --class CLASSNAME
+                                       --driver DRIVER
+                                       [-u USER]
+                                       [--password PASSWORD]
+                                       [--schema SCHEMA]
+                                       [--table TABLE]
+                                       [--write_strategy {CREATE,INSERT,DROP_AND_CREATE,TRUNCATE_AND_INSERT,CREATE_OR_OVERWRITE}]
+                                       [--column_mapping_file COLUMN_MAPPING_FILE]
+                                       [--only_members]
+                                       [--disable_transaction]
+
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象のターゲットリストが所属するプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | 対象のターゲットリストのIDを指定します。 |
+| `--`connection | 必須 | JDBCの接続用URLを指定します。 |
+|  |  | 例)jdbc:postgresql://host:5432/database |
+| `--`class | 必須 | JDBCにおけるドライバーのクラス名を指定します。 |
+|  |  | 例)org.postgresql.Driver |
+| `--`driver | 必須 | ドライバーとしてアップロード済みのjarファイル名を指定します。 |
+|  |  | ファイル名はdriverコマンドを用いて確認できます。 |
+| -u / `--`user | 任意 | 接続ユーザー名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`password | 任意 | 接続ユーザーのパスワードを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`schema | 任意 | 出力先のテーブルが属するスキーマを指定します。 |
+|  |  | スキーマを指定することで、対話型でテーブルを選択する場合にテーブル一覧が絞り込まれます。 |
+| `--`table | 任意 | 出力先のテーブル名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`write_strategy | 任意 | 出力先データベースへのテーブルの書き込み方法を指定します。 |
+|  |  | 詳細は「[`--`write_strategyオプション](#--write_strategyオプション)」を参照してください。 |
+|  |  | 指定しない場合は、「CREATE」が適用されます。 |
+| `--`column_mapping_file | 任意 | KI内のcolumn_id、および出力先DBにおける列名のマッピングをおこなう設定ファイルのパスを指定します。 |
+|  |  | 詳細は 「[`--`column_mapping_fileオプション](#--column_mapping_fileオプション)」を参照してください。 |
+| `--`only_members | 任意 | このパラメーターを指定すると、該当するメンバーのデータのみに絞り込まれ、該当/非該当の真偽値列は省略されます。 |
+|  |  | 指定しない場合は、該当/非該当の真偽値列が含まれたフォーマットで全件出力されます。 |
+| `--`disable_transaction | 任意 | このパラメーターを指定すると、取り込み時のトランザクションを無効化します。 |
+
+
+### project app target_list save_to_segments
+セグメント一覧にターゲットリストを保存します。
+```
+ki project app target_list save_to_segments --project_id PROJECT_ID
+                                            --app_id APP_ID
+                                            name
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象のターゲットリストが所属しているプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | 対象のターゲットリストのIDを指定します。 |
+| name | 必須 | 保存するセグメント名を指定します。 |
+
+```
+$ ki project app target_list save_to_segments --project_id=1 --app_id=2 リスク顧客20190101
+Target list has been saved as segment リスク顧客20190101 successfully.
+```
+
+### project app target_list export_as_listview
+ターゲットリストをリストビューとしてエクスポートします。
+```
+ki project app target_list export_as_listview --project_id PROJECT_ID
+                                              --app_id APP_ID
+                                              [--result]
+                                              [--only_members]
+                                              name
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象のターゲットリストが所属しているプロジェクトのIDを指定します。 |
+| `--`app_id | 必須 | 対象のターゲットリストのIDを指定します。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたデータセットのIDが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| `--`only_members | 任意 | このパラメーターを指定すると、該当するメンバーのデータのみに絞り込まれ、該当/非該当の真偽値列は省略されます。 |
+|  |  | 指定しない場合は、該当/非該当の真偽値列が含まれたフォーマットで全件出力されます。 |
+| name | 必須 | エクスポートによって作成されるリストビュー名を指定します。 |
+
+```
+$ ki project app target_list export_as_listview --project_id=9256 --app_id=2 リストビュー001
+Target list has been exported as a list view with ID 5.
+```
+### project dataset ls
+プロジェクトの分析用データ一覧を表示します。
+```
+ki project dataset ls --project_id PROJECT_ID
+                      [--app_id APP_ID]
+                      [-tz TIMEZONE]
+                      [--table | --json | --text]
+                      [--delimiter {comma,semicolon,tab,space}]
+                      [--quote {single,double,none}]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 分析用データを列挙する対象のプロジェクトのIDを指定します。 |
+| `--`app_id | 任意 | 指定したapp_idの分析アプリで使用されているデータセットを表示します。 |
+|  |  | 分析アプリが参照している世代の分析用データ一覧を表示します。 |
+| -tz / `--`timezone | 任意 | created_at、last_updated_atのタイムゾーン(Asia/Tokyoなど)を指定します。 |
+|  |  | デフォルトでは、コマンドを実行している環境のタイムゾーン設定が用いられます。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+分析用データ関連のコマンドで指定するdataset_idは、このコマンドの実行結果から確認できます。
+```
+$ ki project dataset ls --project_id=1
+|  dataset_id  |  dataset_name  |     created_at      |     updated_at      |
+|--------------+----------------+---------------------+---------------------|
+|      1       |    売上履歴(EC)    | 2023/04/14 10:59:42 | 2023/04/14 10:59:51 |
+|      2       |    売上履歴(店舗)    | 2023/04/14 10:59:42 | 2023/04/14 10:59:51 |
+|      3       |     顧客マスタ      | 2023/04/14 10:59:42 | 2023/04/14 10:59:51 |
+|      4       |    WEBアクセス     | 2023/04/14 10:59:42 | 2023/04/14 10:59:51 |
+```
+
+### project dataset head
+分析用データの先頭N件(デフォルトは10件)を表示します。
+```
+ki project dataset head --project_id PROJECT_ID
+                        --dataset_id DATASET_ID
+                        [-n N]
+                        [--table | --json | --text]
+                        [--delimiter {comma,semicolon,tab,space}]
+                        [--quote {single,double,none}]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象の分析用データが所属するプロジェクトのIDを指定します。 |
+| `--`dataset_id | 必須 | 対象の分析用データのIDを指定します。 |
+| -n / `--`records | 任意 | 表示するデータの件数(デフォルトは10)を指定します。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+以下は、先頭5件を表示する場合の実行例です。
+```
+$ ki project dataset head --project_id=1 --dataset_id=2 -n 5
+|   顧客ID    |        購買日時         |    購買日     |  購入額  |  商品カテゴリ  |
+|-----------+---------------------+------------+-------+----------|
+| 100000154 | 2017-04-21 15:40:53 | 2017-04-21 | 2020  |   商品D    |
+| 100000154 | 2017-12-08 19:24:30 | 2017-12-08 | 1620  |   商品A    |
+| 100000154 | 2018-06-10 18:21:00 | 2018-06-10 | 2980  |   商品C    |
+| 100000154 | 2018-07-15 20:07:48 | 2018-07-15 | 1780  |   商品D    |
+| 100000154 | 2018-12-15 12:42:44 | 2018-12-15 | 2310  |   商品A    |
+```
+
+### project dataset schema
+分析用データのスキーマ(各カラムのIDや型)を表示します。
+```
+ki project dataset schema --project_id PROJECT_ID
+                          --dataset_id DATASET_ID
+                          [--table | --json | --text]
+                          [--delimiter {comma,semicolon,tab,space}]
+                          [--quote {single,double,none}]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象の分析用データが所属するプロジェクトのIDを指定します。 |
+| `--`dataset_id | 必須 | 対象の分析用データのIDを指定します。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+```
+$ ki project dataset schema --project_id=1 --dataset_id=2
+|  column_id  |  column_name  |  column_type  |
+|-------------+---------------+---------------|
+|  df2_0007   |     顧客ID      |    integer    |
+|  df2_0008   |     購買日時      |   datetime    |
+|  df2_0009   |      購買日      |     date      |
+|  df2_0010   |      購入額      |    integer    |
+|  df2_0011   |    商品カテゴリ     |    string     |
+```
+
+### project dataset rm
+分析用データの登録を解除します。
+```
+ki project dataset rm --project_id PROJECT_ID
+                      --dataset_id DATASET_ID
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象の分析用データが所属するプロジェクトのIDを指定します。 |
+| `--`dataset_id | 必須 | 対象の分析用データのIDを指定します。 |
+
+```
+$ ki project dataset rm --project_id=1 --dataset_id=3
+Dataset has been deregistered successfully.
+```
+
+### project dataset export
+分析用データをZIP圧縮形式でエクスポートします。
+```
+ki project dataset export --project_id PROJECT_ID
+                          --dataset_id DATASET_ID
+                          [--delimiter {comma,semicolon,tab,space}]
+                          [--overwrite]
+                          file_path
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象の分析用データが所属するプロジェクトのIDを指定します。 |
+| `--`dataset_id | 必須 | 対象の分析用データのIDを指定します。 |
+| `--`delimiter | 任意 | エクスポートするCSVファイルの区切り文字を指定します。 |
+|  |  | 指定しない場合はカンマ文字(,)が適用されます。 |
+| `--`overwrite | 任意 | このパラメーターを指定した場合、file_pathで指定したパスにファイルが存在するとき、新しいファイルで上書きします。 |
+| file_path | 必須 | ファイルをダウンロードするパスを指定します。 |
+
+以下はmaster.zipという名前でエクスポートし解凍する場合の実行例です。
+```
+$ ki project dataset export --project_id=1 --dataset_id=1 master.zip
+Dataset has been downloaded to master.zip in ZIP format.
+$ unzip master.zip
+Archive:  master.zip
+  inflating: 顧客マスタ.csv
+```
+
+### project dataset save_to_datasets
+分析用データをデータセットとしてエクスポートします。
+```
+ki project dataset save_to_datasets --project_id PROJECT_ID
+                                    --dataset_id USING_DATASET_ID
+                                    [-f FOLDER]
+                                    (--name name | --overwrite_to DATASET_ID)
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象の分析用データが所属するプロジェクトのIDを指定します。 |
+|  |  |  |
+| `--`dataset_id | 必須 | 対象の分析用データのIDを指定します。 |
+| -f / `--`folder | 任意 | 保存先のフォルダーを指定します。 |
+|  |  | typeがFOLDERのデータセットのdataset_idを指定します。 |
+|  |  | 詳細は「[フォルダー階層](#フォルダー階層)」を参照してください。 |
+| `--`name | 必須 | 新規保存するデータセット名を指定します。 |
+|  | ※新規データセットとして保存する場合 |  |
+| `--`overwrite_to | 必須 | 上書き対象のデータセットIDを指定します。 |
+|  | ※既存のデータセットを上書きする場合 |  |
+
+
+### project dataset export_to_database
+分析用データをデータベースのテーブルとしてエクスポートします。
+```
+ki project dataset export_to_datasets --project_id PROJECT_ID
+                                      --dataset_id USING_DATASET_ID
+                                      --database_type {POSTGRESQL,ORACLE,MYSQL,SQLSERVER}
+                                      -h HOST
+                                      [-p PORT]
+                                      [--database DATABASE]
+                                      [-u USER]
+                                      [--password PASSWORD]
+                                      [--schema SCHEMA]
+                                      [--table TABLE]
+                                      [--write_strategy {CREATE_NEW, APPEND_EXISTING, OVERWRITE, DELETE_APPEND, CREATE_OR_OVERWRITE}]
+                                      [--column_mapping_file COLUMN_MAPPING_FILE]
+                                      [--disable_transaction]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象の分析用データが所属するプロジェクトのIDを指定します。 |
+| `--`dataset_id | 必須 | 対象の分析用データのIDを指定します。 |
+| `--`database_type | 必須 | 接続先データベースの種別を以下のいずれかから指定します。 |
+|  |  | - POSTGRESQL |
+|  |  | - ORACLE |
+|  |  | - MYSQL |
+|  |  | - SQLSERVER |
+| -h / `--`host | 必須 | 接続先データベースのKIサーバーから解決可能なアドレスを指定します。 |
+| -p / `--`port | 任意 | 接続先データベースの接続ポートを指定します。 |
+|  |  | 省略した場合は、データベース種別に応じてデフォルトのポートが選択されます。 |
+| `--`database | 任意 | 接続先のデータベース名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| -u / `--`user | 任意 | 接続ユーザー名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`password | 任意 | 接続ユーザーのパスワードを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`schema | 任意 | 出力先のテーブルが属するスキーマを指定します。 |
+|  |  | スキーマを指定することで、対話型でテーブルを選択する場合にテーブル一覧が絞り込まれます。 |
+| `--`table | 任意 | 出力先のテーブル名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`write_strategy | 任意 | 出力先データベースへのテーブルの書き込み方法を指定します。 |
+|  |  | 詳細は「[`--`write_strategyオプション](#--write_strategyオプション)」を参照してください。 |
+|  |  | 指定しない場合は、「CREATE」が適用されます。 |
+| `--`column_mapping_file | 任意 | KI内のcolumn_id、および出力先DBにおける列名のマッピングをおこなう設定ファイルのパスを指定します。 |
+|  |  | 詳細は 「[`--`column_mapping_fileオプション](#--column_mapping_fileオプション)」を参照してください。 |
+| `--`disable_transaction | 任意 | このパラメーターを指定すると、取り込み時のトランザクションを無効化します。 |
+
+
+### project dataset export_jdbc
+JDBCを用いて、外部ソースに分析用データをエクスポートします。
+```
+ki project dataset export_jdbc --project_id PROJECT_ID
+                               --dataset_id DATASET_ID
+                               --connection CONNECTION
+                               --class CLASS_NAME
+                               --driver DRIVER
+                               [-u USER_NAME]
+                               [--password PASSWORD]
+                               [--schema SCHEMA]
+                               [--table TABLE]
+                               [--write_strategy {CREATE,INSERT,DROP_AND_CREATE,TRUNCATE_AND_INSERT,CREATE_OR_OVERWRITE}]
+                               [--column_mapping_file COLUMN_MAPPING_FILE]
+                               [--disable_transaction]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象の分析用データが所属しているプロジェクトのIDを指定します。 |
+| `--`dataset_id | 必須 | 対象の分析用データのIDを指定します。 |
+| `--`connection | 必須 | JDBCの接続用URLを指定します。 |
+|  |  | 例)jdbc:postgresql://host:5432/database |
+| `--`class | 必須 | JDBCにおけるドライバーのクラス名を指定します。 |
+|  |  | 例)org.postgresql.Driver |
+| `--`driver | 必須 | ドライバーとしてアップロード済みのjarファイル名を指定します。 |
+|  |  | ファイル名はdriverコマンドを用いて確認できます。 |
+| -u / `--`user_name | 任意 | 接続ユーザー名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`password | 任意 | 接続ユーザーのパスワードを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`schema | 任意 | 出力先のテーブルが属するスキーマを指定します。 |
+|  |  | スキーマを指定することで、対話型でテーブルを選択する場合にテーブル一覧が絞り込まれます。 |
+| `--`table | 任意 | 出力先のテーブル名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`write_strategy | 任意 | 出力先データベースへのテーブルの書き込み方法を指定します。 |
+|  |  | 詳細は「[`--`write_strategyオプション](#--write_strategyオプション)」を参照してください。 |
+|  |  | 指定しない場合は、「CREATE」が適用されます。 |
+| `--`column_mapping_file | 任意 | KI内のcolumn_id、および出力先DBにおける列名のマッピングをおこなう設定ファイルのパスを指定します。 |
+|  |  | 詳細は 「[`--`column_mapping_fileオプション](#--column_mapping_fileオプション)」を参照してください。 |
+| `--`disable_transaction | 任意 | このパラメーターを指定すると、取り込み時のトランザクションを無効化します。 |
+
+
+### project dataset refresh
+特定の分析用データを更新します。
+```
+ki project dataset refresh --project_id PROJECT_ID
+                           --dataset_id DATASET_ID
+                           [--ignore_schema_change]
+                           [--async]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 対象の分析用データが所属するプロジェクトのIDを指定します。 |
+| `--`dataset_id | 必須 | 対象の分析用データのIDを指定します。 |
+| `--`ignore_schema_change | 任意 | このパラメーターを指定すると、スキーマの変更がある場合でも強制的に更新されます。 |
+|  |  | 指定しない場合、スキーマの変更があるとエラーになります。 |
+| `--`async | 任意 | このパラメーターを指定した場合、ワークフローの実行完了まで待たずにtask_idを標準出力に出力して終了します。 |
+|  |  | 詳細は「[`--`asyncオプションとtask waitコマンド](#--asyncオプションとtask-waitコマンド)」を参照してください。 |
+
+
+```
+$  ki project dataset refresh --project_id=1 --dataset_id=1
+Dataset has been refreshed successfully.
+```
+
+### project dataset refresh_all
+ワークフローを実行して、すべての分析用データを更新します。
+```
+ki project dataset refresh_all --project_id PROJECT_ID
+                               [--async]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | 分析用データを更新したいプロジェクトのIDを指定します。 |
+| `--`async | 任意 | このパラメーターを指定した場合、ワークフローの実行完了まで待たずにtask_idを標準出力に出力して終了します。 |
+|  |  | 詳細は「[`--`asyncオプションとtask waitコマンド](#--asyncオプションとtask-waitコマンド)」を参照してください。 |
+
+```
+$ ki project dataset refresh_all --project_id=7907 --async
+e8fe4ba4-a40d-4a4a-aa6f-dbcab2f80fd0
+```
+
+
+### project segment ls
+セグメント一覧を表示します。
+```
+ki project segment ls --project_id PROJECT_ID
+                      [--dataset_id DATASET_ID]
+                      [-tz TIMEZONE]
+                      [--table | --json | --text]
+                      [--delimiter {comma,semicolon,tab,space}]
+                      [--quote {single,double,none}]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`project_id | 必須 | セグメント一覧が属するプロジェクトのIDを指定します。 |
+| `--`dataset_id | 任意 | 分析用データのIDを指定します。 |
+|  |  | 特定のデータセットのセグメントのみに絞り込む場合に指定します。 |
+|  |  | 指定しない場合は、すべてのデータセットのセグメントが表示されます。 |
+| -tz / `--`timezone | 任意 | created_at、last_updated_atのタイムゾーン(Asia/Tokyoなど)を指定します。 |
+|  |  | デフォルトでは、コマンドを実行している環境のタイムゾーン設定が用いられます。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+```
+$ ki project segment ls --project_id=1
+|              segment_id              |     segment_name      |  description  |  created_by  |     created_at      |
+|--------------------------------------+-----------------------+---------------+--------------+---------------------|
+| 097e3424-7220-4c0d-a1c9-cac2f55fc02e |     店舗売上履歴 の数が5以上     |               |   admin001   | 2022/05/10 20:20:33 |
+| 10b25484-a4e2-4b0b-af05-db2af135681d |       ターゲットリスト        |               |   admin001   | 2022/05/11 08:54:06 |
+| b2bc9e31-fe51-4214-8b7c-a5cc4ce05f84 | 商品カテゴリ が 商品A の数が2から20 |               |   admin001   | 2022/05/10 20:20:33 |
+| c97b6485-95aa-4732-b4cf-b794b920540b |    購入額 の合計が8600以上     |               |   admin001   | 2022/05/10 20:20:33 |
+```
+
+### schedule ls
+スケジュール実行の設定一覧を取得します。
+```
+ki schedule ls [-tz TIMEZONE]
+               [--table | --json | --text]
+               [--delimiter {comma,semicolon,tab,space}]
+               [--quote {single,double,none}]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+| -tz / `--`timezone | 任意 | next_run、last_runのタイムゾーン(Asia/Tokyoなど)を指定します。 |
+|  |  | デフォルトでは、コマンドを実行している環境のタイムゾーン設定が用いられます。 |
+
+取得できる設定項目は以下のとおりです。
+```
+
+$ ki schedule ls
+|  schedule_id  |  schedule_name  |  frequency   |  actions  |  disabled  |      next_run       |      last_run       |
+|---------------+-----------------+--------------+-----------+------------+---------------------+---------------------|
+|       2       |   Schedule001   | 00 12 * * *  |     1     |    True    |                     | 2023/07/21 12:00:00 |
+|       3       |   Schedule002   | 00 12 31 * * |     1     |   False    | 2023/07/31 12:00:00 | 2023/05/31 12:00:00 |
+```
+- schedule_id：スケジュールID
+- schedule_name：スケジュール名
+- frequency：このスケジュールの実行タイミングの設定(cron形式)
+- actions：このスケジュールに設定されているアクションの数
+- disabled：無効化されているかどうか
+- next_run：次回実行予定時刻
+- last_run：最後に実行された時刻
+
+### schedule exec
+指定したスケジュールを即時実行します。
+```
+ki schedule exec --schedule_id SCHEDULE_ID
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| schedule_id | 必須 | 実行するスケジュールのIDを指定します。 |
+
+```
+$  ki schedule exec --schedule_id=4
+
+Schedule has been completed successfully.
+```
+
+### schedule history
+スケジュールの実行履歴を取得します。
+```
+ki schedule history [-n N]
+                    [-tz TIMEZONE]
+                    [--schedule_id]
+                    [--start_time_from]
+                    [--start_time_to]
+                    [--table | --json | --text]
+                    [--delimiter {comma,semicolon,tab,space}]
+                    [--quote {single,double,none}]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| -n, `--`records | 任意 | 取得する履歴の件数(開始時刻ベースで最新からN件)を指定します。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+| -tz / `--`timezone | 任意 | started_at, finished_atのタイムゾーン(Asia/Tokyoなど)を指定します。 |
+|  |  | デフォルトでは、コマンドを実行している環境のタイムゾーン設定が用いられます。 |
+| `--`schedule_id | 任意 | 特定のスケジュール設定を指定します。 |
+|  |  | 指定しない場合はすべてのスケジュール設定の実行履歴が表示されます。 |
+| `--`start_time_from | 任意 | 実行開始日時が指定する日時以降のスケジュールログを取得します(`yyyy/mm/dd HH:MM:SS形式`)。 |
+|  |  | 日時はダブルクオート(`"`)で囲う必要がありますのでご注意ください。 |
+| `--`start_time_to | 任意 | 実行開始日時が指定する日時以前のスケジュールログを取得します(`yyyy/mm/dd HH:MM:SS形式`)。 |
+|  |  | 日時はダブルクオート(`"`)で囲う必要がありますのでご注意ください。 |
+
+```
+$ ki schedule history --schedule_id=2 --start_time_from="2023/07/01 07:00:00"
+|  id  |    name     |     started_at      |     finished_at     |  status  |
+|------+-------------+---------------------+---------------------+----------|
+|  2   | Schedule001 | 2023/07/21 12:00:00 | 2023/07/21 12:00:50 | SUCCESS  |
+|  2   | Schedule001 | 2023/07/20 12:00:00 | 2023/07/20 12:00:52 | SUCCESS  |
+|  2   | Schedule001 | 2023/07/14 12:00:00 | 2023/07/14 12:00:54 | SUCCESS  |
+|  2   | Schedule001 | 2023/07/12 12:00:00 | 2023/07/12 12:00:48 | SUCCESS  |
+|  2   | Schedule001 | 2023/07/06 12:00:00 | 2023/07/06 12:00:54 | SUCCESS  |
+|  2   | Schedule001 | 2023/07/05 12:00:00 | 2023/07/05 12:00:54 | SUCCESS  |
+```
+### task ls
+実行中のタスク一覧を取得します。
+```
+ki task ls [--table | --json | --text]
+           [--delimiter {comma,semicolon,tab,space}]
+           [--quote {single,double,none}]
+           [-tz TIMEZONE]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+| -tz / `--`timezone | 任意 | start_timeのタイムゾーン(Asia/Tokyoなど)を指定します。 |
+|  |  | デフォルトでは、コマンドを実行している環境のタイムゾーン設定が用いられます。 |
+
+```
+$ ki task ls
+| task_id | task_name | task_type | username | status | start_time | execution_time | project_id | project_name |
+|--------------------------------------+-----------------+-------------------------+------------+----------+---------------------+------------------+--------------+----------------|
+| 524adadc-443e-4721-b407-9a21edec7855 | Refresh dataset | reacquire_from_database | admin001 | STARTED | 2023/09/26 19:09:09 | 000:00:01 | | |
+```
+
+### task history
+タスクの実行履歴を取得します。
+```
+ki task history [-n N]
+                [--start_time_from START_TIME_FROM]
+                [--start_time_to START_TIME_TO]
+                [--project_id PROJECT_ID]
+                [--table | --json | --text]
+                [--delimiter {comma,semicolon,tab,space}]
+                [--quote {single,double,none}]
+                [-tz TIMEZONE]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| -n / `--`records | 任意 | 取得する履歴の件数(開始時刻ベースで最新からN件)を指定します。 |
+| `--`start_time_from | 任意 | タスクの開始日時が指定する日時以降のタスクを取得します (`yyyy/mm/dd HH:MM:SS`)。 |
+|  |  | 日時はダブルクオート(`"`)で囲う必要がありますのでご注意ください。 |
+| `--`start_time_to | 任意 | タスクの開始日時が指定する日時以前のタスクを取得します (`yyyy/mm/dd HH:MM:SS`)。 |
+|  |  | 日時はダブルクオート(`"`)で囲う必要がありますのでご注意ください。 |
+| `--`project_id | 任意 | 指定したプロジェクトに関連するタスクのみに絞り込んで取得します。 |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+| -tz / `--`timezone | 任意 | start_time、end_timeのタイムゾーン(Asia/Tokyoなど)を指定します。 |
+|  |  | デフォルトでは、コマンドを実行している環境のタイムゾーン設定が用いられます。 |
+
+```
+$ ki task history --start_time_from="2023-09-26T19:00:00" --start_time_to="2023-09-26 19:30:00" -n 2
+|               task_id                |           task_name           |        task_type        |   username   |  status  |     start_time      |      end_time       |  execution_time  |  project_id  |  project_name  |
+|--------------------------------------+-------------------------------+-------------------------+--------------+----------+---------------------+---------------------+------------------+--------------+----------------|
+| 9de98d87-1409-4539-a0f1-fbc4747b45c3 | Target list (New target list) |   execute_target_list   |   admin001   | SUCCESS  | 2023/09/26 19:27:25 | 2023/09/26 19:27:28 |    000:00:03     |     9227     |      閲覧のみ      |
+| 524adadc-443e-4721-b407-9a21edec7855 |        Refresh dataset        | reacquire_from_database |   admin001   | SUCCESS  | 2023/09/26 19:09:09 | 2023/09/26 19:09:14 |    000:00:05     |              |                |
+```
+
+### task wait
+指定したタスクが完了するまで停止します。 \
+使用方法の詳細は後述の「[`--`asyncオプションとtask waitコマンド](#--asyncオプションとtask-waitコマンド)」を参照してください。
+```
+ki task wait [--success]
+             [--max_waiting_time MAX_WAITING_TIME]
+             task_id
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`success | 任意 | このパラメーターを指定すると、指定したタスクが正常終了した場合のみこのコマンドも正常終了 (終了ステータス0で終了)します。 |
+|  |  | 指定しない場合は、タスクが異常終了した場合でもコマンドは正常終了します。 |
+| `--`max_waiting_time | 任意 | 最大待ち時間を秒単位で指定します。 |
+|  |  | 指定した時間待ち合わせても対象のタスクが完了しない場合、コマンドはタイムアウトして異常終了します。 |
+|  |  | 指定しない場合はタスクが完了するまで待機し続けます。 |
+| task_id | 必須 | 待ち合わせるタスクのタスクIDを指定します。 |
+|  |  | タスクIDは`--`asyncオプションを使用して取得します。 |
+|  |  | 詳細は「[`--`asyncオプションとtask waitコマンド](#--asyncオプションとtask-waitコマンド)」を参照してください。 |
+
+```
+$ ki task wait 0b77866e-0392-4fe1-9914-af81cb0f64d2
+The task (0b77866e-0392-4fe1-9914-af81cb0f64d2) has been completed in status SUCCESS.
+```
+
+### user ls
+ユーザー一覧を表示します。
+```
+ki user ls [--table | --json | --text]
+           [--delimiter {comma,semicolon,tab,space}]
+           [--quote {single,double,none}]
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+ユーザー関連や権限関連のコマンドで指定するuser_idは、このコマンドの実行結果から確認できます。
+```
+$ ki user ls
+|               user_id                |   username   |     role      |  license   |  enabled  |  memo  |
+|--------------------------------------+--------------+---------------+------------+-----------+--------|
+| e73e1a07-cca0-406a-aed9-513b1656712b |   admin001   | ADMINISTRATOR | POWER_USER |   True    |        |
+| e47af72a-48b2-49ce-bbd7-fbeb16023bea | lightuser001 |  LIGHT_USER   | POWER_USER |   True    |        |
+| d3a4ac22-3eec-4d24-9772-e594bbc4f244 | poweruser001 |  POWER_USER   | POWER_USER |   True    |        |
+| 1caea2e5-48f0-4ba7-8023-2a8e08746277 | poweruser002 |  POWER_USER   | POWER_USER |   False   |        |
+```
+
+### user add
+ユーザーを追加します。
+```
+ki user add [-u USERNAME]
+            [-p PASSWORD]
+            [--license {POWER_USER,LIGHT_USER}]
+            [--role {ADMINISTRATOR,POWER_USER,LIGHT_USER}]
+            [--memo MEMO]
+            [--result]
+            [--group_id GROUP_ID]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| -u / `--`user | 任意 | ユーザー名を指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`password | 任意 | ユーザーのパスワードを指定します。 |
+|  | ※省略した場合は対話型で設定 | 省略した場合は対話型で設定が可能です。 |
+| `--`license | 任意 | ユーザーの作成に使用するライセンスを以下のいずれかから指定します。 |
+|  | ※省略した場合は対話型で設定 | - POWER_USER |
+|  |  | - LIGHT_USER |
+|  |  | 省略した場合は対話型で設定が可能です。 |
+| `--`role | 任意 | 作成するユーザーの権限種別を以下のいずれかから指定します。 |
+|  | ※省略した場合は対話型で設定 | - ADMINISTRATOR |
+|  |  | - POWER_USER |
+|  |  | - LIGHT_USER |
+|  |  | 省略した場合は対話型で設定が可能です。 |
+| `--`memo | 任意 | ユーザーに関するメモを設定できます。 |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたユーザーのuser_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| `--`group_id | 任意 | 作成したユーザーが所属するユーザーグループのIDを指定します。 |
+|  |  | 複数のユーザーグループに所属する場合は、グループごとにそれぞれ`--`group_idオプションで指定してください。 |
+
+```
+$ ki user add --group_id=bc561dbd-1cb7-49d8-bd23-e243e0b44f10 --group_id=a28c5dc9-ad6a-47b0-90fe-25c85044e14b
+Please enter username: poweruser003
+Please enter password for poweruser003:
+License used for this user (POWER_USER / LIGHT_USER): POWER_USER
+Role of a user (ADMINISTRATOR / POWER_USER / LIGHT_USER): POWER_USER
+
+User has been created successfully with ID e6bbeba5-1014-471a-89ef-c8413517992a.
+```
+
+### user rm
+ユーザーを削除します。
+```
+ki user rm --user_id USER_ID
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`user_id | 必須 | 削除対象のユーザーのIDを指定します。 |
+
+```
+$ ki user rm --user_id=338b6714-6105-45d5-8d46-67b5b42ebb83
+The user has been removed successfully.
+```
+
+### user enable
+ユーザーを有効化します。
+```
+ki user enable user_ids
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| user_ids | 必須 | 有効化するユーザーのIDを指定します(複数指定可能)。 |
+
+```
+$ ki user enable e8683770-7537-447b-a7cc-af8c821131ff 7651f315-b4a7-4075-80f5-c10f9ce97e33
+The users have been enable successfully.
+```
+
+### user disable
+ユーザーを無効化します。
+```
+ki user disable user_ids
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| user_ids | 必須 | 無効化するユーザーのIDを指定します(複数指定可能)。 |
+
+```
+$ ki user disable  e8683770-7537-447b-a7cc-af8c821131ff 7651f315-b4a7-4075-80f5-c10f9ce97e33
+The users have been disable successfully.
+```
+
+### user import_csv
+CSVファイルを用いて、ユーザーの一括追加、および更新をおこないます。
+```
+ki user import_csv [-y]
+                   [--dry_run]
+                   file_path
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| -y | 任意 | このパラメーターを指定した場合、変更点の確認をスキップして取り込みます。 |
+|  |  | 指定しない場合は、変更点を適用するかの確認プロンプトが表示されて入力待ちになります。 |
+| `--`dry_run | 任意 | このパラメーターを指定した場合、実際のインポートはせずに変更点の表示のみおこなわれます。 |
+| file_path | 必須 | インポートするCSVファイルのパスを指定します。 |
+
+```
+$  cat users.csv
+"username","password","role","licenseType","enabled","groups","memo"
+"admin001","","ADMINISTRATOR","POWER_USER","True","""admini""","memo1"
+"lightuser001","","LIGHT_USER","POWER_USER","True","""lightuser""",""
+"poweruser001","","POWER_USER","POWER_USER","True","""poweruser""",""
+"poweruser002","","POWER_USER","POWER_USER","True","""poweruser""",""
+"poweruser003","password003","POWER_USER","POWER_USER","True","""poweruser""",""
+
+
+$  ki user import_csv users.csv
+The following changes will occur.
+
+Users to be created:
+  - poweruser003
+Users to be updated:
+  - admin001
+  - lightuser001
+  - poweruser001
+  - poweruser002
+Are you sure you want to proceed? [Y/n]: y
+
+Import has been completed successfully.
+1 users created, 4 users updated.
+```
+
+### user export_csv
+KIサーバーに登録されているユーザー一覧をCSVファイルにエクスポートします。
+```
+ki user export_csv [--overwrite]
+                   file_path
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`overwrite | 任意 | このパラメーターを指定した場合、file_pathで指定したパスにファイルが存在するとき、新しいファイルで上書きします。 |
+| file_path | 必須 | ダウンロードしたユーザー一覧CSVファイルを配置するパスを指定します。 |
+
+```
+$ ki user export_csv --overwrite users.csv
+Users have been downloaded to users.csv successfully.
+```
+
+### user group ls
+ユーザーグループ一覧を表示します。
+```
+ki user group ls [--table | --json | --text]
+                 [--delimiter {comma,semicolon,tab,space}]
+                 [--quote {single,double,none}]
+```
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`table, `--`json, `--`text, `--`delimiter, `--`quote | 任意 | 「[データの表示形式の指定](#データの表示形式の指定)」を参照してください。 |
+
+
+ユーザー関連や権限関連のコマンドで指定するgroup_idは、このコマンドの実行結果から確認できます。\
+membersは各グループに所属しているユーザー数を表しています。
+
+```
+$ ki user group ls
+|               group_id               |   name   |  members  |
+|--------------------------------------+----------+-----------|
+| 23f83c77-2faa-41df-86d9-029c21da6c60 | group001 |     0     |
+```
+
+### user group add
+ユーザーグループを追加します。
+```
+ki user group add [--result]
+                  name
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`result | 任意 | このパラメーターを指定すると、作成されたグループのgroup_idが標準出力に出力されます。 |
+|  |  | 詳細は「[`--`resultオプション](#--resultオプション)」を参照してください。 |
+| name | 必須 | 追加するグループ名を指定します。 |
+```
+$ ki user group add group002
+
+User Group has been created successfully with ID 94e9af7e-9a1e-4dc0-be55-a887b9b196cd
+```
+
+### user group rm
+ユーザーグループを削除します。
+```
+ki user group rm --group_id GROUP_ID
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`group_id | 必須 | 削除対象のグループのIDを指定します。 |
+
+```
+$ ki user group rm --group_id=1ecea6c9-9e63-4ba6-a06e-a98f4cd1fdde
+
+Group 1ecea6c9-9e63-4ba6-a06e-a98f4cd1fdde has been successfully removed.
+```
+
+### user group add_member
+グループにユーザーを追加します。
+```
+ki user group add_member --group_id GROUP_ID
+                         --user_id USER_ID
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`group_id | 必須 | ユーザー追加対象のグループのIDを指定します。 |
+| `--`user_id | 必須 | 追加するユーザーのIDを指定します。 |
+
+```
+$ ki user group add_member --group_id=6b85e1e3-3ef0-42d6-b721-dd54400d0c40 --user_id=b205d49e-ab7d-4442-82c7-e3c690f57abf
+
+User b205d49e-ab7d-4442-82c7-e3c690f57abf has been successfully added to the group 6b85e1e3-3ef0-42d6-b721-dd54400d0c40.
+```
+
+### user group rm_member
+グループからユーザーをはずします。
+```
+ki user group rm_member --group_id GROUP_ID
+                        --user_id USER_ID
+```
+
+| パラメーター | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| `--`group_id | 必須 | 対象のグループのIDを指定します。 |
+| `--`user_id | 必須 | グループからはずすユーザーのIDを指定します。 |
+
+```
+$ ki user group rm_member --group_id=6b85e1e3-3ef0-42d6-b721-dd54400d0c40 --user_id=b205d49e-ab7d-4442-82c7-e3c690f57abf
+
+User b205d49e-ab7d-4442-82c7-e3c690f57abf has been successfully removed from the group 6b85e1e3-3ef0-42d6-b721-dd54400d0c40.
+```
+
+### version
+クライアントとサーバーのバージョンを表示します。
+```
+$ ki version
+Server version: 2.3.0.215
+Client version: 2.3.0 (Built against API 2.3.0.173)
+```
+## 補足
+### フォルダー階層
+一部のリソース(データセットやプロジェクトなど)は、フォルダーによる階層構造で管理されています。\
+各リソースのls系コマンドは、デフォルトではルート階層のリソースのみを表示します。\
+フォルダーを掘り下げて中身を表示したい場合は、コマンドに`--`folder / -fオプションを追加して掘り下げたいフォルダーのIDを指定します。
+```
+$ ki dataset ls
+|  type  |  dataset_id  |  dataset_name  |  owner   |  rows  |  columns  |   size    |     created_at      |   last_updated_at   |
+|--------+--------------+----------------+----------+--------+-----------+-----------+---------------------+---------------------|
+| FOLDER |      60      |     small      | admin001 |   0    |     0     | 367820800 | 2022/03/11 09:20:27 | 2022/03/11 09:20:32 |
+| FOLDER |      12      |      demo      | admin001 |   0    |     0     | 13910016  | 2022/02/03 12:51:54 | 2022/02/03 12:52:00 |
+| FOLDER |      3       |    DoD mart    | admin001 |   0    |     0     | 261292032 | 2022/02/02 13:36:16 | 2022/02/02 13:36:23 |
+```
+たとえば、dataset lsコマンドで`--`folder / -fオプションに対象のフォルダーのdataset_idを指定すると、そのフォルダーの中身を表示できます。
+```
+$ ki dataset ls -f 12
+|  type  |  dataset_id  |  dataset_name  |  owner   |  rows  |  columns  |  size   |     created_at      |   last_updated_at   |
+|--------+--------------+----------------+----------+--------+-----------+---------+---------------------+---------------------|
+|  FILE  |      65      |     店舗売上履歴     | admin001 | 43713  |     5     | 3031040 | 2022/03/29 11:14:27 | 2022/03/29 11:18:02 |
+|  FILE  |      57      |     EC売上履歴     | admin001 | 37550  |     6     | 2916352 | 2022/02/21 13:27:11 | 2022/02/21 13:27:11 |
+|  FILE  |      14      |    WEBアクセス     | admin001 | 110138 |     4     | 7536640 | 2022/02/03 12:52:26 | 2022/02/03 12:52:26 |
+|  FILE  |      13      |     顧客マスタ      | admin001 |  4998  |     6     | 425984  | 2022/02/03 12:52:14 | 2022/02/03 12:52:14 |
+```
+
+### データの表示形式の指定
+一部のコマンド(主にls系コマンド)では、出力の形式を以下の3種類の中から選択できます。
+- `--`tableオプションを指定した場合(デフォルト)：\
+  table形式で出力されます。
+- `--`jsonオプションを指定した場合：\
+  json形式で出力されます。
+- `--`textオプションを指定した場合：\
+  text形式で出力されます。
+
+#### table形式
+以下のようにテーブル形式で表示されます。\
+通常の目視による結果確認では、この形式を指定します。
+```
+$ ki dataset ls --table
+|  type  |  dataset_id  |  dataset_name  |  owner   |  rows  |  columns  |   size    |     created_at      |   last_updated_at   |
+|--------+--------------+----------------+----------+--------+-----------+-----------+---------------------+---------------------|
+| FOLDER |      60      |     small      | admin001 |   0    |     0     | 367820800 | 2022/03/11 09:20:27 | 2022/03/11 09:20:32 |
+| FOLDER |      12      |      demo      | admin001 |   0    |     0     | 13910016  | 2022/02/03 12:51:54 | 2022/02/03 12:52:00 |
+| FOLDER |      3       |    DoD mart    | admin001 |   0    |     0     | 261341184 | 2022/02/02 13:36:16 | 2022/02/02 13:36:23 |
+|  URL   |     132      |    test.csv    | admin001 |   2    |     2     |   16384   | 2022/04/27 10:21:17 | 2022/04/27 10:21:17 |
+```
+
+#### json形式
+JSON形式で表示されます。\
+以下のようにjqコマンドと連携してパースする場合は、この形式を指定します。
+```
+$ ki dataset ls --json | jq
+[
+  {
+    "type": "FOLDER",
+    "dataset_id": 60,
+    "dataset_name": "small",
+    "owner": "admin001",
+    "rows": 0,
+    "columns": 0,
+    "size": 367820800,
+    "created_at": "2022/03/11 09:20:27",
+    "last_updated_at": "2022/03/11 09:20:32"
+  },
+  {
+    "type": "FOLDER",
+    "dataset_id": 12,
+    "dataset_name": "demo",
+    "owner": "admin001",
+    "rows": 0,
+    "columns": 0,
+    "size": 13910016,
+    "created_at": "2022/02/03 12:51:54",
+    "last_updated_at": "2022/02/03 12:52:00"
+  },
+  {
+    "type": "FOLDER",
+    "dataset_id": 3,
+    "dataset_name": "DoD mart",
+    "owner": "admin001",
+    "rows": 0,
+    "columns": 0,
+    "size": 261341184,
+    "created_at": "2022/02/02 13:36:16",
+    "last_updated_at": "2022/02/02 13:36:23"
+  },
+  {
+    "type": "URL",
+    "dataset_id": 129,
+    "dataset_name": "sample3.csv",
+    "owner": "admin001",
+    "rows": 6,
+    "columns": 2,
+    "size": 16384,
+    "created_at": "2022/04/27 10:09:07",
+    "last_updated_at": "2022/04/27 10:09:07"
+  }
+]
+```
+#### text形式
+ヘッダーがないCSVファイルのようなフォーマットで出力されます。\
+このフォーマットの場合のみ、以下のオプションで区切り文字や各値の囲み文字を指定できます。
+- `--`delimiter：\
+  区切り文字を以下のいずれかから指定します。
+  - comma
+  - semicolon
+  - tab
+  - space
+- `--`quote：\
+  囲み文字を以下のいずれかから指定します。
+  - single
+  - double
+  - none
+```
+$ ki dataset ls --text --quote=none
+FOLDER,60,small,admin001,0,0,367820800,2022/03/11 09:20:27,2022/03/11 09:20:32
+FOLDER,12,demo,admin001,0,0,13910016,2022/02/03 12:51:54,2022/02/03 12:52:00
+FOLDER,3,DoD mart,admin001,0,0,261341184,2022/02/02 13:36:16,2022/02/02 13:36:23
+URL,129,sample3.csv,admin001,6,2,16384,2022/04/27 10:09:07,2022/04/27 10:09:07
+```
+
+cutコマンドやawkコマンドと組み合わせてパースするのに適しています。\
+以下はデータセットsample3.csvのdataset_idを抽出する場合の実行例です。
+```
+$ ki dataset ls --text --quote=none | grep sample3.csv | awk -F'[,]' '{print $2}'
+129
+```
+
+### スキーマファイルのフォーマット
+JSON形式の配列でデータ中のカラム名に対応する型と取り込み有無を指定します。
+```
+[
+  {
+     "column_name": "カラム名",
+     "column_type": "型",
+     "exclude": true
+  },
+  {
+     "column_name": "カラム名2",
+     "column_type": "型2"
+  }
+  ...
+]
+```
+
+| フィールド名 | 必須/任意 | 説明 |
+| ------------ | --------- | ---- |
+| column_name | 必須 | データ中のカラム名を指定します。 |
+|  |  | CSVファイルやExcelファイルであればヘッダーの列名、データベースであればテーブルの列名を指定します。 |
+| column_type | 任意 | 取り込む型を以下のいずれかから指定します。 |
+|  | ※column_typeとexcludeのいずれかの指定が必要。 | - 整数型：integer |
+|  |  | - 小数型：decimal |
+|  |  | - 論理型：boolean |
+|  |  | - 文字列型：string |
+|  |  | - 日時型：datetime |
+|  |  | - 日付型：date |
+|  |  | - 時刻型：time |
+| exclude | 任意 | 除外するかどうかを指定します。 |
+|  | ※column_typeとexcludeのいずれかの指定が必要。 | trueを指定した場合、この列は取り込み対象から除外されます。 |
+
+### `--`resultオプション
+フォルダー作成など、リソースを作成するコマンドにおいて、作成したリソースのIDのみが標準出力に出力されるオプションです。
+```
+$ cki dataset mkdir Folder001
+Folder Folder001 has been created with ID 135.
+
+
+$ cki dataset mkdir Folder001 --result
+136
+```
+Command Substitutionを用いて、作成したリソースのIDを後続のコマンドに使用することができます。
+```
+# 店舗売上という名前のフォルダを作成
+$ FOLDER_ID=$(ki dataset mkdir 店舗売上 --result)
+
+
+# 作成した店舗売上フォルダにファイルをアップロード
+$ ki dataset add_file -f ${FOLDER_ID} 店舗売上20220427.csv
+```
+
+### `--`write_strategyオプション
+データベースに出力するコマンドでは、出力先テーブルへの書き込み方法を指定する`--`write_strategyオプションを持っている場合があります。\
+各設定値の詳細は以下のとおりです。
+
+| 設定値 | 説明 |
+| ------ | ---- |
+| CREATE | 新規テーブルとして書き込みます。 |
+|  | 指定した名前のテーブルがすでに出力先に存在する場合は、エラーになります。 |
+| INSERT | 既存のテーブルの末尾に追記します。 |
+|  | 出力先のテーブルが存在しない場合は、エラーになります。 |
+| DROP_AND_CREATE | DROPにより既存のテーブルを削除してから、新規テーブルとして書き込みます。 |
+| TRUNCATE_AND_INSERT | TRUNCATEにより既存のテーブルを空にしてから、出力データを挿入します。 |
+| CREATE_OR_OVERWRITE | 指定したテーブルが存在しない場合は、新規テーブルとして書き込みます。 |
+|  | 存在する場合は、DROPにより既存のテーブルを削除してから、新規テーブルとして書き込みます。 |
+
+### `--`column_mapping_fileオプション
+出力先のデータベースによっては、KI内のデータセットの列名で使用している文字が列名としてサポートされていない場合があります。\
+特にターゲットリストでは、日本語を含んでいる列名の場合や、データベース側の制限を超えた文字数の列名の場合があります。\
+このオプションで設定ファイルを指定することで、列名を補正できます。\
+設定ファイルには、以下のように列名を変更したい列に関してKI内でのcolumn_idとリネーム後の列名を記載します(名前を変更しない列の記載は不要)。
+```
+{
+   "KI内のcolumn_id1": "出力先DBでの列名1",
+   "KI内のcolumn_id22": "出力先DBでの列名2",
+   ...
+}
+```
+なお、ターゲットリストでは、project app target_list schemaコマンドを用いて、以下のような一番左の列にcolumn_idを含んだデータを取得できます。\
+設定ファイルの作成にご活用ください。
+```
+$ ki project app target_list schema --project_id=4 --app_id=2 --text
+"df1_0001","顧客ID","integer"
+"score","スコア","integer"
+"pred","集計値","decimal"
+"df1_0005","離反","integer"
+"df1_0002","性別","string"
+"df1_0003","年代","integer"
+"df1_0004","会員ポイント残高","integer"
+"df1_0006","店舗での最終購買日","date"
+"c_bcf7804b_2619_4d74_bb9f_24c01cfc7320","WEBアクセス の数","integer"
+"c_b70ff04a_9325_44fc_a78f_a1b5880016c3","アクセス日時 の最終日からの経過日数","integer"
+"c_701757db_b2da_43de_9cc8_baf1f240bd5f","ページ種別 が 商品動画 の数","integer"
+"c_a1ce4cba_9397_47ca_afca_1b555b21d3fc","直近14日における 1日あたりの アクセス日時 の数","decimal"
+"c_a14ee64a_c289_4590_a7b5_6897b0614227","直近14日における ページ種別 が キャンペーン の数","integer"
+"c_15d52c84_d592_4b2b_adb3_c9cceddd4cee","直近14日における ページ種別 が 商品紹介 の数","integer"
+"c_38f75c53_fcb8_4f16_9279_2f88e29def89","直近14日における ページ種別 が 会員情報 の数","integer"
+"c_39d8133f_cb51_44a7_ab5c_22a51518a792","直近14日における ページ種別 が その他 の数","integer"
+"s_34b6c623_e930_4c33_b94a_7b4e67cceebe","会員ポイント残高 ≧ 770","integer"
+"s_73669f54_db71_486c_8f85_14a643aba9d8","ページ種別 が 商品動画 の数 ≧ 5","integer"
+"s_c089eb6d_2c62_4519_842e_ab9025e7d13a","WEBアクセス の数 ≧ 11","integer"
+"s_d7ac571b_0554_488c_be89_e89b6e3c862d","アクセス日時 の最終日からの経過日数 ≦ 4","integer"
+"s_7b0da1a7_356d_4c88_9501_9959d1abf287","年代 が 30 ～ 59","integer"
+"s_8b01d1f7_6096_44c4_a244_8ccf3e82c12d","性別 = 女性","integer"
+```
+### `--`wait_interval, `--`wait_countオプション
+一部のコマンドでは、処理をバックグラウンドでおこない、その結果を定期的に確認する動作になっています。\
+その際の「確認の間隔」、「最大確認回数」を、オプションで指定することができます。
+
+- `--`wait_interval：\
+  確認の間隔(秒)を指定します。
+- `--`wait_count：\
+  確認回数を指定します。
+
+wait_interval(秒)×wait_count(回)の待ち合わせをおこないます。\
+コマンドがタイムアウトする場合は、`--`wait_countの値を増やすことをご検討ください。
+
+### `--`asyncオプションとtask waitコマンド
+実行時間が長い可能性がある一部のコマンドでは、`--`asyncオプションを指定することで処理の完了を待たずにtask_idを取得できます。\
+完了待ちの最中にセッションが切れるなど何らかの理由でCKIの処理が途中停止した場合に備えて、以下のようにtask_idを取得して保存しておくことで、タスクの完了待ちを再開できます。\
+bashでの実装例は以下のとおりです。
+```
+DATASET_ID=14830
+
+
+TASK_ID_FILE="refresh-dataset"
+
+# task_idを記録するファイルがなければ作成しておく
+if [ ! -f "${TASK_ID_FILE}" ]; then
+    touch "${TASK_ID_FILE}"
+fi
+
+TASK_ID="$(cat "${TASK_ID_FILE}" | tr -d '\n')"
+if [ -n "${TASK_ID}" ]; then
+    # ファイルにtask_idが書き込まれている場合は実行中なのでtask waitで完了を待つ
+    ki task wait "${TASK_ID}"
+    rm "${TASK_ID_FILE}"
+else
+    # ファイルにtask_idがなければ実行中でないので新規実行し、task_idをファイルに記録。
+    ki dataset refresh --dataset_id=${DATASET_ID} --async > "${TASK_ID_FILE}"
+fi
+
+
+# ...更新完了後の処理
+```
+
+### オフラインインストールについて
+:version[2.4.0]
+
+wheelファイルには依存ライブラリの実体が同梱されておらず、ネットワーク経由でインストールされます。\
+そのため、オフライン環境にCKIをインストールする場合は、依存ライブラリをあらかじめインターネット接続可能な環境でダウンロードしてオフライン環境にインストールしておく必要があります。\
+CKIの依存ライブラリは以下のとおりです。
+- CKI Ver.2.4.0以降
+  ```
+  altgraph==0.17.3
+  certifi==2022.12.7
+  cryptography==38.0.4
+  idna==3.4
+  packaging==23.1
+  pkginfo==1.9.6
+  python-dateutil==2.8.2
+  pytz==2022.6
+  requests==2.31.0
+  six==1.16.0
+  tabulate==0.9.0
+  urllib3==2.2.0
+  ```
+- CKI Ver.2.3.0以前
+  ```
+  altgraph==0.17.3
+  certifi==2022.12.7
+  cryptography==38.0.4
+  idna==3.4
+  packaging==23.1
+  pkginfo==1.9.6
+  python-dateutil==2.8.2
+  pytz==2022.6
+  requests==2.28.1
+  six==1.16.0
+  tabulate==0.9.0
+  urllib3==1.26.13
+  ```
+
+1. インターネット接続可能な環境で、pip downloadコマンドを用いて上記のライブラリをダウンロードします。\
+   bash系の環境の場合、上記の依存ライブラリ一覧の内容をファイルに保存して以下のコマンドを実行すると、ライブラリのwheelファイル一式をカレントディレクトリにダウンロードできます。
+   ```
+   cat <依存ライブラリの一覧ファイル> | xargs -n 1 pip download
+   ```
+
+1. 手順1.でダウンロードしたディレクトリをzip形式などに固めて、オフライン環境に配置します。\
+   配置したファイルを解凍し、以下のようにwheelファイルを使ってインストールします。
+   ```
+   ls -1 *.whl | xargs -n 1 pip install
+   ```
+   上記のコマンドが完了すると依存ライブラリ一式がインストールされた状態になります。\
+   続けて、CKIのインストール手順を実施してください。
+
+### PowerShellにおけるスクリプトの実行について
+PowerShellでは、スクリプトの実行が[実行ポリシー](https://learn.microsoft.com/ja-jp/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-7.3)によって制限されている場合があります。\
+その場合、下記のコマンドを実行してスクリプトの実行を許可する必要があります。
+- セッション中のみ許可する場合
+  ```
+  pwsh.exe -ExecutionPolicy RemoteSigned
+  ```
+- 永続的に許可する場合
+  ```
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned
+  ```

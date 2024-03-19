@@ -1,0 +1,153 @@
+---
+title: スケジュール実行結果のチャット通知
+---
+import Img from "../../components/Img.tsx";
+
+:version[2.1.6]
+
+外部チャットサービスへの通知機能について説明します。\
+通知機能では、KIと外部チャットサービスを連携することで、スケジュール実行の結果をチャットに通知することができます。\
+動作確認済みのチャットサービスは以下のとおりです。
+
+- Microsoft Teams
+- Slack
+- Chatwork
+- Google Chat
+
+通知機能を用いると、日々のスケジュール実行の結果をKIにアクセスせずにリアルタイムで確認することができます。
+
+通知機能を利用するにあたって、以下の設定をおこないます。
+
+- [Webhookの追加](#webhookの追加)\
+   通知先の外部チャットサービス情報をKIに登録します。
+- [イベント通知の追加](#イベント通知の追加)\
+   通知の条件など、通知に関する設定をおこないます。
+
+## Webhookの設定
+
+### Webhookの追加
+
+通知先の外部チャットサービス情報をKIに登録する手順について説明します。
+
+1. KIに管理者でログイン後、システム設定から[通知設定]メニューを選択します。
+1. [通知設定]画面にて、[+Webhookを追加]ボタンをクリックします。
+1. [Webhook]画面が表示されます。\
+   通知先の外部チャットサービスの情報を指定して、[設定]ボタンをクリックします。
+
+   <Img src="/assets/img/capture/capture-notification-1.png" alt="Webhook画面" client:load />
+
+   1. Webhookの名前を入力します。
+   1. 通知先のチャットサービスをプルダウンから選択します。
+   1. 外部チャットサービスのエンドポイントURLを指定します。\
+      エンドポイントURLの取得方法は、連携するチャットサービスにより異なります。\
+      取得方法については以下のページを参照してください。
+
+      | サービス名      | 参考URL                                                                                                                                                                                                                        |
+      | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+      | Microsoft Teams | [https://learn.microsoft.com/ja-jp/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook](https://learn.microsoft.com/ja-jp/microsoftteams/platform/webhooks-and-connectors/how-to/add-incoming-webhook) |
+      | Slack           | [https://api.slack.com/messaging/webhooks](https://api.slack.com/messaging/webhooks)                                                                                                                                           |
+      | Chatwork        | [https://developer.chatwork.com/reference/post-rooms-room_id-messages](https://developer.chatwork.com/reference/post-rooms-room_id-messages)                                                                                   |
+      | Google Chat     | [https://developers.google.com/chat/how-tos/webhooks?hl=ja#step_1_register_the_incoming_webhook](https://developers.google.com/chat/how-tos/webhooks?hl=ja#step_1_register_the_incoming_webhook)                               |
+      |                 | ※Webhook機能を利用するには、Business Starter以上のアカウントである必要があります。                                                                                                                                             |
+
+   1. HTTPメソッドには「POST」が自動選択されます。
+   1. HTTPリクエストに使用するContent-typeを指定します。\
+      以下の表を参考にして、プルダウンから選択してください。
+
+      | サービス名      | Content-type                                            |
+      | --------------- | ------------------------------------------------------- |
+      | Microsoft Teams | `「Content-type:application/json」`                     |
+      | Slack           | `「Content-type:application/json」`                     |
+      | Chatwork        | `「Content-type:application/x-www-form-urlencoded」`    |
+      | Google Chat     | `「Content-type:application/json」`                     |
+
+   1. 認証の有無を選択します。\
+      以下の表を参考にして、選択してください。
+
+      | サービス名      | 認証方法                                                                                                         |
+      | --------------- | ---------------------------------------------------------------------------------------------------------------- |
+      | Microsoft Teams | [認証]：[なし]                                                                                                   |
+      | Slack           | [認証]：[なし]                                                                                                   |
+      | Chatwork        | - [認証]：[トークン]                                                                                             |
+      |                 | - [トークン]：                                                                                                   |
+      |                 | 　以下のページを参考にして、トークンを発行してください。                                                         |
+      |                 | 　[https://help.chatwork.com/hc/ja/articles/115000172402​](https://help.chatwork.com/hc/ja/articles/115000172402) |
+      |                 | - [ヘッダ]：x-chatworktoken:                                                                                     |
+      | Google Chat     | [認証]：[なし]                                                                                                   |
+
+### Webhookの編集/削除
+
+Webhookの編集、および削除について説明します。
+
+1. KIに管理者でログイン後、システム設定から[通知設定]メニューを選択します。
+
+   <Img src="/assets/img/capture/capture-notification-2.png" alt="Webhook画面" client:load />
+
+   1.  Webhookを編集します。\
+       Webhookの上にマウスオーバーし、[編集]ボタンをクリックしてください。
+   1.  Webhookを削除します。\
+       Webhookの上にマウスオーバーし、[ごみ箱]ボタンをクリックしてください。
+
+## イベント通知の設定
+
+### イベント通知の追加
+
+イベント通知を設定する手順について説明します。
+
+1. KIに管理者でログイン後、システム設定から[通知設定]メニューを選択します。
+1. [通知設定]画面にて、[イベント通知設定]ボタンをクリックします。
+1. タブが切り換わりますので、[+イベント通知設定を追加]ボタンをクリックします。
+1. [イベント通知設定]画面が表示されますので、画面に従って項目を入力してください。
+
+   <Img src="/assets/img/capture/capture-notification-3.png" alt="イベント通知設定画面" client:load />
+
+   1. イベント通知設定の有効/無効を切り換えることができます。\
+      [有効]に設定しているイベント通知設定のみ、通知の送信がおこなわれます。
+   1. 通知設定の名前を入力します。
+   1. 通知設定の説明を入力します。
+   1. 通知するイベントの種別として「スケジュール実行完了通知」が固定で選択されます。
+   1. 通知する条件を指定します。
+   1. 通知先のWebhookを指定します。\
+      Webhookを追加するには、「[Webhookの追加](#webhookの追加)」を参照してください。
+
+   なお、通知内容は通知先のチャットサービスに応じてデフォルトの内容が設定されます。\
+   通知内容をカスタマイズしたい場合は[高度な設定]から変更してください。
+
+   - [プレースホルダを挿入]ボタンをクリックすると、通知内容に挿入する項目を選択できます。\
+     項目を選択すると、カーソル位置にプレースホルダーが挿入されます。
+   - [テスト送信]ボタンをクリックすると、入力した設定内容で通知をテスト送信できます。
+1. [設定]ボタンをクリックします。
+
+### イベント通知の編集/削除
+
+イベント通知の編集、および削除について説明します。
+
+1. KIに管理者でログイン後、システム設定から[通知設定]メニューを選択します。
+1. [通知設定]画面にて、[イベント通知設定]ボタンをクリックします。
+
+   <Img src="/assets/img/capture/capture-notification-4.png" alt="イベント通知設定タブ" client:load />
+
+   1. イベント通知設定を編集します。\
+      イベント通知設定の上にマウスオーバーし、[編集]ボタンをクリックしてください。
+   1. イベント通知設定を削除します。\
+      イベント通知設定の上にマウスオーバーし、[ごみ箱]ボタンをクリックしてください。
+
+### イベント通知の履歴確認
+
+イベント通知の履歴を確認する手順について説明します。\
+イベント通知の履歴から、通知の状況やエラーの詳細を確認できます。
+
+1. KIに管理者でログイン後、システム設定から[通知設定]メニューを選択します。
+1. [通知設定]画面にて、[イベント通知設定]ボタンをクリックします。
+1. 確認したい通知の設定にマウスオーバーして、[通知履歴]ボタン(以下画面の青枠部分)をクリックします。
+
+   <Img src="/assets/img/capture/capture-notification-5.png" alt="イベント通知設定タブ" client:load />
+
+1. [通知履歴]画面が表示されます。
+
+   <Img src="/assets/img/capture/capture-notification-6.png" alt="通知履歴画面" client:load />
+
+   1. 通知の開始日時が表示されます。
+   1. 通知を開始してからの経過時間が表示されます。
+   1. 通知の状況が表示されます。\
+      通知に失敗した場合はリンクで表示され、クリックするとエラーの詳細を確認できます。
