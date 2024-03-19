@@ -8,3 +8,5 @@ langchain
 langchain_community
 azure-cosmos
 markdown
+azure-search-documents
+openai
