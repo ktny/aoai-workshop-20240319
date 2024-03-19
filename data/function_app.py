@@ -1,13 +1,3 @@
-<<<<<<< Updated upstream
-import azure.functions as func
-import logging
-from langchain_community.document_loaders import UnstructuredMarkdownLoader
-from azure.cosmos import CosmosClient
-from azure.search.documents import SearchClient
-from azure.core.credentials import AzureKeyCredential
-import os
-import hashlib
-=======
 import hashlib
 import json
 import logging
@@ -19,18 +9,13 @@ from azure.cosmos import CosmosClient
 from azure.search.documents import SearchClient
 from azure.search.documents.models import VectorizedQuery
 from langchain_community.document_loaders import UnstructuredMarkdownLoader
->>>>>>> Stashed changes
 from openai import AzureOpenAI
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 cosmos_client = CosmosClient.from_connection_string(os.environ["CosmosKey"])
 search_client = SearchClient(os.environ["SearchEndpoint"], "data", AzureKeyCredential(os.environ["SearchKey"]))
-<<<<<<< Updated upstream
-aoai_client = AzureOpenAI(azure_endpoint=os.environ["Endpoint"], api_key=os.environ["key"], api_version="2024-02-15-preview")
-=======
 aoai_client = AzureOpenAI(azure_endpoint=os.environ["AoaiEndpoint"], api_key=os.environ["AoaiKey"], api_version="2024-02-15-preview")
 
->>>>>>> Stashed changes
 
 @app.route(route="upload_data")
 def upload_data(req: func.HttpRequest) -> func.HttpResponse:
